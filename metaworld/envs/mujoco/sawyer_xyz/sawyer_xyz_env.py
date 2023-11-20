@@ -186,6 +186,15 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
             action_rot_scale,
         )
 
+    def get_num_steps(self):
+        return 1
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(self.obj_init_pos)
+        elif step == 1:
+            self._set_obj_xyz(self._target_pos)
+
     def seed(self, seed):
         assert seed is not None
         self.np_random, seed = seeding.np_random(seed)

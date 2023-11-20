@@ -103,6 +103,12 @@ class SawyerHandlePullEnvV2(SawyerXYZEnv):
         self._target_pos = self._get_site_pos("goalPull")
 
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(-0.1)
+        else:
+            self._set_obj_xyz(-0.001)
 
     def compute_reward(self, action, obs):
         obj = obs[4:7]

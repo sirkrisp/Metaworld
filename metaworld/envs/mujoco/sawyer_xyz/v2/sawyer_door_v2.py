@@ -112,6 +112,16 @@ class SawyerDoorEnvV2(SawyerXYZEnv):
 
         return self._get_obs()
 
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(0.0)
+        else:
+            self._set_obj_xyz(-1.5708)
+
+    def get_num_steps(self):
+        # NOTE does not include the initial step
+        return 1
+
     @staticmethod
     def _reward_grab_effort(actions):
         return (np.clip(actions[3], -1, 1) + 1.0) / 2.0

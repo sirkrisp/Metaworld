@@ -83,6 +83,16 @@ class SawyerDoorCloseEnvV2(SawyerXYZEnv):
         self._set_obj_xyz(-1.5708)
 
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(-1.5708)
+        else:
+            self._set_obj_xyz(0.0)
+
+    def get_num_steps(self):
+        # NOTE does not include the initial step
+        return 1
 
     @_assert_task_is_set
     def evaluate_state(self, obs, action):

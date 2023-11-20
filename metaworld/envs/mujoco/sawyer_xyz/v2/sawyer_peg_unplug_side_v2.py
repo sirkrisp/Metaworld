@@ -26,6 +26,8 @@ class SawyerPegUnplugSideEnvV2(SawyerXYZEnv):
             render_mode=render_mode,
         )
 
+        self.unplug_dist = 0.04
+
         if tasks is not None:
             self.tasks = tasks
 
@@ -93,24 +95,31 @@ class SawyerPegUnplugSideEnvV2(SawyerXYZEnv):
         self._reset_hand()
 
         pos_box = self._get_state_rand_vec()
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "box")
-        ] = pos_box
+        self.model.body("box").pos = pos_box
         pos_plug = pos_box + np.array([0.044, 0.0, 0.131])
-        self._set_obj_xyz(pos_plug)
-        self.obj_init_pos = self._get_site_pos("pegEnd")
+        self.obj_init_pos = pos_plug
+        self._set_obj_xyz(self.obj_init_pos)
 
-        self._target_pos = pos_plug + np.array([0.15, 0.0, 0.0])
+        self._target_pos = self.obj_init_pos + np.array([self.unplug_dist, 0.0, 0.0])
+
+        self.pegEnd_site_pos = self._get_site_pos("pegEnd")
+
+        self._goal_pos = self.pegEnd_site_pos + np.array([self.unplug_dist, 0.0, 0.0])
+
+        # self.obj_init_pos = self._get_site_pos("pegEnd")
+        # self._target_pos = pos_plug + np.array([0.15, 0.0, 0.0])
+
+        self.model.site("goal").pos = self._goal_pos
 
         return self._get_obs()
 
     def compute_reward(self, action, obs):
         tcp = self.tcp_center
-        obj = obs[4:7]
+        pegEnd_site_pos = obs[4:7]
         tcp_opened = obs[3]
-        target = self._target_pos
-        tcp_to_obj = np.linalg.norm(obj - tcp)
-        obj_to_target = np.linalg.norm(obj - target)
+        target = self._goal_pos
+        tcp_to_obj = np.linalg.norm(pegEnd_site_pos - tcp)
+        obj_to_target = np.linalg.norm(pegEnd_site_pos - target)
         pad_success_margin = 0.05
         object_reach_radius = 0.01
         x_z_margin = 0.005
@@ -118,7 +127,7 @@ class SawyerPegUnplugSideEnvV2(SawyerXYZEnv):
 
         object_grasped = self._gripper_caging_reward(
             action,
-            obj,
+            pegEnd_site_pos,
             object_reach_radius=object_reach_radius,
             obj_radius=obj_radius,
             pad_success_thresh=pad_success_margin,
@@ -126,7 +135,7 @@ class SawyerPegUnplugSideEnvV2(SawyerXYZEnv):
             desired_gripper_effort=0.8,
             high_density=True,
         )
-        in_place_margin = np.linalg.norm(self.obj_init_pos - target)
+        in_place_margin = self.unplug_dist
 
         in_place = reward_utils.tolerance(
             obj_to_target,
@@ -134,7 +143,7 @@ class SawyerPegUnplugSideEnvV2(SawyerXYZEnv):
             margin=in_place_margin,
             sigmoid="long_tail",
         )
-        grasp_success = tcp_opened > 0.5 and (obj[0] - self.obj_init_pos[0] > 0.015)
+        grasp_success = tcp_opened > 0.5 and (pegEnd_site_pos[0] - self.obj_init_pos[0] > 0.015)
 
         reward = 2 * object_grasped
 

@@ -88,6 +88,13 @@ class SawyerDoorLockEnvV2(SawyerXYZEnv):
 
     def _get_quat_objects(self):
         return self.data.body("door_link").xquat
+    
+    def _set_obj_xyz(self, pos):
+        qpos = self.data.qpos.flat.copy()
+        qvel = self.data.qvel.flat.copy()
+        qpos[9] = pos
+        qvel[9] = 0
+        self.set_state(qpos, qvel)
 
     def reset_model(self):
         self._reset_hand()
@@ -98,7 +105,14 @@ class SawyerDoorLockEnvV2(SawyerXYZEnv):
             mujoco.mj_step(self.model, self.data)
         self.obj_init_pos = self.data.body("lock_link").xpos
         self._target_pos = self.obj_init_pos + np.array([0.0, -0.04, -0.1])
+        self._set_obj_xyz(0.0)
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(0.0)
+        else:
+            self._set_obj_xyz(np.pi/2)
 
     def compute_reward(self, action, obs):
         del action

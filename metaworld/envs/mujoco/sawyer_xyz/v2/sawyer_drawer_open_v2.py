@@ -50,7 +50,7 @@ class SawyerDrawerOpenEnvV2(SawyerXYZEnv):
         )
         self.goal_space = Box(np.array(goal_low), np.array(goal_high))
 
-        self.maxDist = 0.2
+        self.maxDist = 0.2 # TODO should be 0.15
         self.target_reward = 1000 * self.maxDist + 1000 * 2
 
     @property
@@ -107,6 +107,13 @@ class SawyerDrawerOpenEnvV2(SawyerXYZEnv):
         mujoco.mj_forward(self.model, self.data)
 
         return self._get_obs()
+
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(0)
+        else:
+            # TODO max dist is wrong
+            self._set_obj_xyz(-0.15)
 
     def compute_reward(self, action, obs):
         gripper = obs[:3]

@@ -98,12 +98,17 @@ class SawyerDialTurnEnvV2(SawyerXYZEnv):
         self.obj_init_pos = goal_pos[:3]
         final_pos = goal_pos.copy() + np.array([0, 0.03, 0.03])
         self._target_pos = final_pos
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "dial")
-        ] = self.obj_init_pos
+        self.model.body("dial").pos = self.obj_init_pos
+        self.model.joint("knob_Joint_1").qpos0 = 0.0
         self.dial_push_position = self._get_pos_objects() + np.array([0.05, 0.02, 0.09])
         mujoco.mj_forward(self.model, self.data)
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self.model.joint("knob_Joint_1").qpos0 = 0.0
+        elif step == 1:
+            self.model.joint("knob_Joint_1").qpos0 = np.pi / 2
 
     def compute_reward(self, action, obs):
         obj = self._get_pos_objects()

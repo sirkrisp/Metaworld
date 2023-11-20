@@ -112,6 +112,12 @@ class SawyerHandlePullSideEnvV2(SawyerXYZEnv):
         self.obj_init_pos = self._get_pos_objects()
 
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(-0.1)
+        else:
+            self._set_obj_xyz(-0.001)
 
     def compute_reward(self, action, obs):
         obj = obs[4:7]

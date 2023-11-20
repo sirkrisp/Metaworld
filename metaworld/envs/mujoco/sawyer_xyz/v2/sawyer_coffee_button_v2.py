@@ -100,17 +100,23 @@ class SawyerCoffeeButtonEnvV2(SawyerXYZEnv):
         self._reset_hand()
 
         self.obj_init_pos = self._get_state_rand_vec()
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "coffee_machine")
-        ] = self.obj_init_pos
+        self.model.body("coffee_machine").pos = self.obj_init_pos
 
         pos_mug = self.obj_init_pos + np.array([0.0, -0.22, 0.0])
         self._set_obj_xyz(pos_mug)
+
+        self.model.joint("goal_slidey").qpos0 = 0.02
 
         pos_button = self.obj_init_pos + np.array([0.0, -0.22, 0.3])
         self._target_pos = pos_button + np.array([0.0, self.max_dist, 0.0])
 
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self.model.joint("goal_slidey").qpos0 = 0.02
+        elif step == 1:
+            self.model.joint("goal_slidey").qpos0 = 0.0
 
     def compute_reward(self, action, obs):
         del action

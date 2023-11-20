@@ -50,7 +50,9 @@ class SawyerPickPlaceWallEnvV2(SawyerXYZEnv):
             "hand_init_pos": np.array([0, 0.6, 0.2]),
         }
 
-        self.goal = np.array([0.05, 0.8, 0.2])
+        # NOTE goal position is same as in the XML file
+        # TODO we should change position of goal site in reset_model. At the moment, goal space does not make any sense.
+        self.goal = np.array([0.1, 0.8, 0.2])
 
         self.obj_init_angle = self.init_config["obj_init_angle"]
         self.obj_init_pos = self.init_config["obj_init_pos"]
@@ -131,6 +133,8 @@ class SawyerPickPlaceWallEnvV2(SawyerXYZEnv):
         self.obj_init_pos = goal_pos[:3]
 
         self._set_obj_xyz(self.obj_init_pos)
+
+        self.model.site("goal").pos = goal_pos[-3:]
 
         return self._get_obs()
 

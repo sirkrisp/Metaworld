@@ -112,6 +112,12 @@ class SawyerDrawerCloseEnvV2(SawyerXYZEnv):
 
         return self._get_obs()
 
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(-self.maxDist)
+        else:
+            self._set_obj_xyz(0.0)
+
     def compute_reward(self, action, obs):
         obj = obs[4:7]
 

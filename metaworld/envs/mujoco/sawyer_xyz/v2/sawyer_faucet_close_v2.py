@@ -101,6 +101,12 @@ class SawyerFaucetCloseEnvV2(SawyerXYZEnv):
         mujoco.mj_forward(self.model, self.data)
         return self._get_obs()
 
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(np.array(0))
+        else:
+            self._set_obj_xyz(np.array(-np.pi/2))
+
     def _reset_hand(self):
         super()._reset_hand()
         self.reachCompleted = False

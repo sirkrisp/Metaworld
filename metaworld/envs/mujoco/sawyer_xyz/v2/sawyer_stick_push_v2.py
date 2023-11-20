@@ -124,7 +124,7 @@ class SawyerStickPushEnvV2(SawyerXYZEnv):
     def _set_obj_xyz(self, pos):
         qpos = self.data.qpos.flat.copy()
         qvel = self.data.qvel.flat.copy()
-        qpos[16:18] = pos.copy()
+        qpos[16:18] = pos.copy()[:2]
         qvel[16:18] = 0
         self.set_state(qpos, qvel)
 
@@ -146,6 +146,12 @@ class SawyerStickPushEnvV2(SawyerXYZEnv):
         self.obj_init_pos = self.get_body_com("object").copy()
 
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        pass
+
+    def get_num_steps(self):
+        return 2
 
     def _gripper_caging_reward(
         self,

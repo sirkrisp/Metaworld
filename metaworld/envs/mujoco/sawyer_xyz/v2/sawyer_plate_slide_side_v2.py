@@ -84,7 +84,10 @@ class SawyerPlateSlideSideEnvV2(SawyerXYZEnv):
     def _set_obj_xyz(self, pos):
         qpos = self.data.qpos.flat.copy()
         qvel = self.data.qvel.flat.copy()
-        qpos[9:11] = pos
+        pos_copy = np.array(pos)
+        # TODO something is off with the mesh
+        pos_copy[1] -= 0.6
+        qpos[9:11] = pos_copy[:2]
         self.set_state(qpos, qvel)
 
     def reset_model(self):
@@ -93,11 +96,17 @@ class SawyerPlateSlideSideEnvV2(SawyerXYZEnv):
         self.obj_init_pos = self.init_config["obj_init_pos"]
         self._target_pos = self.goal.copy()
 
+        # TODO only use rand state if rand init is true
         rand_vec = self._get_state_rand_vec()
         self.obj_init_pos = rand_vec[:3]
         self._target_pos = rand_vec[3:]
-        self.data.body("puck_goal").xpos = self._target_pos
-        self._set_obj_xyz(np.zeros(2))
+
+        # NOTE to make the task easier, we let the puck stick out a bit
+        puck_goal_pos = self._target_pos + np.array([-0.08, 0, 0])
+
+        self.model.body("puck_goal").pos = puck_goal_pos
+        self.model.site("goal").pos = self._target_pos
+        self._set_obj_xyz(self.obj_init_pos)
 
         return self._get_obs()
 

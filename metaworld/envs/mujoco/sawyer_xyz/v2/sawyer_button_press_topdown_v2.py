@@ -92,9 +92,7 @@ class SawyerButtonPressTopdownEnvV2(SawyerXYZEnv):
         self._reset_hand()
         goal_pos = self._get_state_rand_vec()
         self.obj_init_pos = goal_pos
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "box")
-        ] = self.obj_init_pos
+        self.model.body("box").pos = self.obj_init_pos
         mujoco.mj_forward(self.model, self.data)
         self._target_pos = self._get_site_pos("hole")
 
@@ -102,6 +100,12 @@ class SawyerButtonPressTopdownEnvV2(SawyerXYZEnv):
             self._target_pos[2] - self._get_site_pos("buttonStart")[2]
         )
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(0)
+        elif step == 1:
+            self._set_obj_xyz(-0.05)
 
     def compute_reward(self, action, obs):
         del action

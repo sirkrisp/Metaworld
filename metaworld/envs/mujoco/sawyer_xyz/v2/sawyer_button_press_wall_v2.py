@@ -112,6 +112,12 @@ class SawyerButtonPressWallEnvV2(SawyerXYZEnv):
         )
 
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self._set_obj_xyz(0)
+        elif step == 1:
+            self._set_obj_xyz(-0.05)
 
     def compute_reward(self, action, obs):
         del action

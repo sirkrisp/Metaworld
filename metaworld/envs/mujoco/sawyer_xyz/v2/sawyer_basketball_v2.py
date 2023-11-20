@@ -9,7 +9,6 @@ from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import (
     _assert_task_is_set,
 )
 
-
 class SawyerBasketballEnvV2(SawyerXYZEnv):
     PAD_SUCCESS_MARGIN = 0.06
     TARGET_RADIUS = 0.08
@@ -82,31 +81,46 @@ class SawyerBasketballEnvV2(SawyerXYZEnv):
         return reward, info
 
     def _get_id_main_object(self):
-        return self.unwrapped.model.geom_name2id("objGeom")
+        return self.unwrapped.model.geom_name2id("basketball")
 
     def _get_pos_objects(self):
-        return self.get_body_com("bsktball")
+        return self.get_body_com("basketball")
 
     def _get_quat_objects(self):
-        return self.data.body("bsktball").xquat
+        return self.data.body("basketball").xquat
+    
+    def correct_obj_pos(self, obj_pos):
+        correction = np.array([0,-0.6,-0.22012784])
+        return obj_pos + correction
 
     def reset_model(self):
         self._reset_hand()
-        self.prev_obs = self._get_curr_obs_combined_no_goal()
+        # self.prev_obs = self._get_curr_obs_combined_no_goal()
         goal_pos = self._get_state_rand_vec()
         basket_pos = goal_pos[3:]
         while np.linalg.norm(goal_pos[:2] - basket_pos[:2]) < 0.15:
             goal_pos = self._get_state_rand_vec()
             basket_pos = goal_pos[3:]
-        self.obj_init_pos = np.concatenate((goal_pos[:2], [self.obj_init_pos[-1]]))
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "basket_goal")
-        ] = basket_pos
-        self._target_pos = self.data.site_xpos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "goal")
-        ]
-        self._set_obj_xyz(self.obj_init_pos)
+        obj_pos = np.concatenate((goal_pos[:2], [0.03]))
+        self.obj_init_pos = obj_pos
+        self.model.body("basketball").pos = self.correct_obj_pos(self.obj_init_pos)
+        self.model.body("basket_goal").pos = basket_pos
+        self._basket_pos = basket_pos
+        # mujoco.mj_forward(self.model, self.data)
+        # self._target_pos = self.data.site_xpos[
+        #     mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "goal")
+        # ]
+        self._target_pos = self._basket_pos + np.array([0, -0.05, 0.25])
+        # self._target_pos = self.model.site("goal").pos.copy()
+        # self._set_obj_xyz(self.obj_init_pos)
+
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self.model.body("basketball").pos = self.correct_obj_pos(self.obj_init_pos)
+        elif step == 1:
+            self.model.body("basketball").pos = self.correct_obj_pos(self._target_pos)
 
     def compute_reward(self, action, obs):
         obj = obs[4:7]

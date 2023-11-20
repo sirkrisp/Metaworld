@@ -106,14 +106,23 @@ class SawyerWindowOpenEnvV2(SawyerXYZEnv):
         self.obj_init_pos = self._get_state_rand_vec()
 
         self._target_pos = self.obj_init_pos + np.array([0.2, 0.0, 0.0])
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "window")
-        ] = self.obj_init_pos
+        self.model.body("window").pos = self.obj_init_pos
 
         self.window_handle_pos_init = self._get_pos_objects()
-        self.data.joint("window_slide").qpos = 0.0
-        mujoco.mj_forward(self.model, self.data)
+
+        # self.model.joint("window_slide").qpos = 0.0
+        self.model.joint("window_slide").qpos0 = 0.0
+
+        # self.data.joint("window_slide").qpos = 0.0
+        # mujoco.mj_forward(self.model, self.data)
+
         return self._get_obs()
+    
+    def go_to_step(self, step):
+        if step == 0:
+            self.model.joint("window_slide").qpos0 = 0.0
+        elif step == 1:
+            self.model.joint("window_slide").qpos0 = -0.2
 
     def compute_reward(self, actions, obs):
         del actions

@@ -105,16 +105,22 @@ class SawyerWindowCloseEnvV2(SawyerXYZEnv):
         self.obj_init_pos = self._get_state_rand_vec()
 
         self._target_pos = self.obj_init_pos.copy()
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "window")
-        ] = self.obj_init_pos
+        self.model.body("window").pos = self.obj_init_pos
 
         self.window_handle_pos_init = self._get_pos_objects() + np.array(
             [0.2, 0.0, 0.0]
         )
-        self.data.joint("window_slide").qpos = 0.2
-        mujoco.mj_forward(self.model, self.data)
+        self.model.joint("window_slide").qpos0 = -0.2
+
+        # self.data.joint("window_slide").qpos = 0.2
+        # mujoco.mj_forward(self.model, self.data)
         return self._get_obs()
+
+    def go_to_step(self, step):
+        if step == 0:
+            self.model.joint("window_slide").qpos0 = -0.2
+        elif step == 1:
+            self.model.joint("window_slide").qpos0 = 0.0
 
     def _reset_hand(self):
         super()._reset_hand()
