@@ -109,7 +109,8 @@ class SawyerBinPickingEnvV2(SawyerXYZEnv):
         return self.data.body("obj").xquat
 
     def reset_model(self):
-        self._reset_hand()
+        if self.reset_hand:
+            self._reset_hand()
         self._target_pos = self.goal.copy()
         self.obj_init_pos = self.init_config["obj_init_pos"]
         self.obj_init_angle = self.init_config["obj_init_angle"]

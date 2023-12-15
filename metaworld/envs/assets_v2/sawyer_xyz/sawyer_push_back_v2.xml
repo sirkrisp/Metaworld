@@ -18,6 +18,8 @@
 
       <site name="goal" pos="0.1 0.6 0.02" size="0.02"
             rgba="0 0.8 0 1"/>
+        <geom name="goal_geom" pos="0.1 0.6 0.02" size="0.02"
+            rgba="0 0.8 0 1"/>
 
     </worldbody>
 

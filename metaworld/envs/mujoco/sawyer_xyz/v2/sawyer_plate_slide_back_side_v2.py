@@ -114,7 +114,8 @@ class SawyerPlateSlideBackSideEnvV2(SawyerXYZEnv):
         self.set_state(qpos, qvel)
 
     def reset_model(self):
-        self._reset_hand()
+        if self.reset_hand:
+            self._reset_hand()
 
         self.obj_init_pos = self.init_config["obj_init_pos"]
         self._target_pos = self.goal.copy()
@@ -128,6 +129,8 @@ class SawyerPlateSlideBackSideEnvV2(SawyerXYZEnv):
 
         self.model.body("puck_goal").pos = puck_goal_pos
         self.model.site("goal").pos = self._target_pos
+        self.model.geom("goal_geom").pos = self._target_pos
+        
 
         self._set_obj_xyz(self.obj_init_pos)
 

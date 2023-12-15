@@ -29,6 +29,8 @@
       </body>
       <site name="goal" pos="0. 0.84 0.02" size="0.015"
             rgba="0 0 0.8 1"/>
+      <geom name="goal_geom" pos="0. 0.84 0.02" size="0.015"
+            rgba="0 0 0.8 1"/>
     </worldbody>
 
     <actuator>

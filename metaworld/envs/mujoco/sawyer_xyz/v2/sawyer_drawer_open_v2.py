@@ -110,10 +110,10 @@ class SawyerDrawerOpenEnvV2(SawyerXYZEnv):
 
     def go_to_step(self, step):
         if step == 0:
-            self._set_obj_xyz(0)
+            self._set_obj_xyz(np.array(0))
         else:
             # TODO max dist is wrong
-            self._set_obj_xyz(-0.15)
+            self._set_obj_xyz(np.array(-0.15))
 
     def compute_reward(self, action, obs):
         gripper = obs[:3]

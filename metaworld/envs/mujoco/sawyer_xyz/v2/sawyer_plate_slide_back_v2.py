@@ -105,6 +105,7 @@ class SawyerPlateSlideBackEnvV2(SawyerXYZEnv):
 
         self.model.body("puck_goal").pos = puck_goal_pos
         self.model.site("goal").pos = self._target_pos
+        self.model.geom("goal_geom").pos = self._target_pos
 
         self._set_obj_xyz(self.obj_init_pos)
 

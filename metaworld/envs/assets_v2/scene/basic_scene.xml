@@ -28,7 +28,8 @@
         <quality shadowsize="4096" offsamples="4"/>
 
         <headlight ambient="0.4 0.4 0.4"/>
-
+        
+        <global offwidth="480"/>
     </visual>
 
     <worldbody>

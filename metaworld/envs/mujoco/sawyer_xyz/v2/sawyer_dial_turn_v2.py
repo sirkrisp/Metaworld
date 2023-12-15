@@ -89,7 +89,8 @@ class SawyerDialTurnEnvV2(SawyerXYZEnv):
         return self.data.body("dial").xquat
 
     def reset_model(self):
-        self._reset_hand()
+        if self.reset_hand:
+            self._reset_hand()
         self._target_pos = self.goal.copy()
         self.obj_init_pos = self.init_config["obj_init_pos"]
         self.prev_obs = self._get_curr_obs_combined_no_goal()
@@ -106,9 +107,9 @@ class SawyerDialTurnEnvV2(SawyerXYZEnv):
     
     def go_to_step(self, step):
         if step == 0:
-            self.model.joint("knob_Joint_1").qpos0 = 0.0
+            self.data.joint("knob_Joint_1").qpos[0] = 0.0
         elif step == 1:
-            self.model.joint("knob_Joint_1").qpos0 = np.pi / 2
+            self.data.joint("knob_Joint_1").qpos[0] = np.pi / 2
 
     def compute_reward(self, action, obs):
         obj = self._get_pos_objects()

@@ -3,9 +3,9 @@ import numpy as np
 
 class EnvRenderer:
 
-    def __init__(self, env, camera_name) -> None:
+    def __init__(self, env, camera_name, height=240, width: int = 320) -> None:
         self.camera_name = camera_name
-        self.renderer = mujoco.Renderer(env.model)
+        self.renderer = mujoco.Renderer(env.model, height=height, width=width)
         self.env = env
 
     def render(self, camera_name=None, depth=False, segmentation=False):

@@ -41,6 +41,8 @@ class SawyerNutAssemblyEnvV2(SawyerXYZEnv):
         self.obj_init_angle = self.init_config["obj_init_angle"]
         self.hand_init_pos = self.init_config["hand_init_pos"]
 
+        self.moving_body_name = "RoundNut"
+
         self._random_reset_space = Box(
             np.hstack((obj_low, goal_low)),
             np.hstack((obj_high, goal_high)),
@@ -102,13 +104,10 @@ class SawyerNutAssemblyEnvV2(SawyerXYZEnv):
         self.obj_init_pos = goal_pos[:3]
         self._target_pos = goal_pos[-3:]
         peg_pos = self._target_pos - np.array([0.0, 0.0, 0.05])
-        self._set_obj_xyz(self.obj_init_pos)
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "peg")
-        ] = peg_pos
-        self.model.site_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "pegTop")
-        ] = self._target_pos
+        # self._set_obj_xyz(self.obj_init_pos)
+        self.model.body(self.moving_body_name).pos = self.obj_init_pos
+        self.model.body("peg").pos = peg_pos
+        self.model.site("pegTop").pos = self._target_pos
         return self._get_obs()
 
     @staticmethod

@@ -20,6 +20,8 @@
       <!-- if pos is (0.0,0.0,0.0) object cannot be moved? -->
       <site name="goal" pos="0.0 0.0 0.02" size="0.01"
             rgba="0.5 0.5 1 1"/>
+      <geom name="goal_geom" pos="0.0 0.0 0.02" size="0.01"
+            rgba="0.5 0.5 1 1"/>
     </worldbody>
 
     <actuator>

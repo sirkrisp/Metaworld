@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 
 import env_renderer
+import keyframes.reset_space as reset_space
 
 from metaworld import MT1
 from metaworld.policies import (
@@ -137,65 +138,65 @@ def test_policy(env_name):
     print(float(completed) / 50)
     assert (float(completed) / 50) > 0.80
 
-env_configs = [
-    # env, action noise pct, cycles, quit on success
-    ('assembly-v2', np.zeros(4), 1, True),
-    # ('basketball-v2', np.zeros(4), 3, True),
-    ('bin-picking-v2', np.zeros(4), 3, True),
-    ('box-close-v2', np.zeros(4), 3, True),
-    ('button-press-topdown-v2', np.zeros(4), 3, True),
-    ('button-press-topdown-wall-v2', np.zeros(4), 3, True),
-    ('button-press-v2', np.zeros(4), 3, True),
-    ('button-press-wall-v2', np.zeros(4), 3, True),
-    ('coffee-button-v2', np.zeros(4), 3, True),
-    ('coffee-pull-v2', np.zeros(4), 3, True),
-    ('coffee-push-v2', np.zeros(4), 3, True),
-    ('dial-turn-v2', np.zeros(4), 3, True),
-    ('disassemble-v2', np.zeros(4), 3, True),
-    ('door-close-v2', np.zeros(4), 3, True),
-    ('door-lock-v2', np.zeros(4), 3, True),
-    ('door-open-v2', np.zeros(4), 3, True),
-    ('door-unlock-v2', np.zeros(4), 3, True),
-    ('hand-insert-v2', np.zeros(4), 3, True),
-    ('drawer-close-v2', np.zeros(4), 3, True),
-    ('drawer-open-v2', np.zeros(4), 3, True),
-    ('faucet-open-v2', np.zeros(4), 3, True),
-    ('faucet-close-v2', np.zeros(4), 3, True),
-    ('hammer-v2', np.zeros(4), 3, True),
-    ('handle-press-side-v2', np.zeros(4), 3, True),
-    ('handle-press-v2', np.zeros(4), 3, True),
-    ('handle-pull-side-v2', np.zeros(4), 3, True),
-    ('handle-pull-v2', np.zeros(4), 3, True),
-    ('lever-pull-v2', np.zeros(4), 3, True),
-    ('peg-insert-side-v2', np.zeros(4), 3, True),
-    ('pick-place-wall-v2', np.zeros(4), 3, True),
-    ('pick-out-of-hole-v2', np.zeros(4), 3, True),
-    ('reach-v2', np.zeros(4), 3, True),
-    ('push-back-v2', np.zeros(4), 3, True),
-    ('push-v2', np.zeros(4), 3, True),
-    ('pick-place-v2', np.zeros(4), 3, True),
-    ('plate-slide-v2', np.zeros(4), 3, True),
-    ('plate-slide-side-v2', np.zeros(4), 3, True),
-    ('plate-slide-back-v2', np.zeros(4), 3, True),
-    ('plate-slide-back-side-v2', np.zeros(4), 3, True),
-    ('peg-unplug-side-v2', np.zeros(4), 3, True),
-    ('soccer-v2', np.zeros(4), 3, True),
-    ('stick-push-v2', np.zeros(4), 3, True),
-    ('stick-pull-v2', np.zeros(4), 3, True),
-    ('push-wall-v2', np.zeros(4), 3, True),
-    ('reach-wall-v2', np.zeros(4), 3, True),
-    ('shelf-place-v2', np.zeros(4), 3, True),
-    ('sweep-into-v2', np.zeros(4), 3, True),
-    ('sweep-v2', np.zeros(4), 3, True),
-    ('window-open-v2', np.zeros(4), 3, True),
-    ('window-close-v2', np.zeros(4), 3, True),
-]
+# env_configs = [
+#     # env, action noise pct, cycles, quit on success
+#     ('assembly-v2', np.zeros(4), 1, True),
+#     # ('basketball-v2', np.zeros(4), 3, True),
+#     ('bin-picking-v2', np.zeros(4), 3, True),
+#     ('box-close-v2', np.zeros(4), 3, True),
+#     ('button-press-topdown-v2', np.zeros(4), 3, True),
+#     ('button-press-topdown-wall-v2', np.zeros(4), 3, True),
+#     ('button-press-v2', np.zeros(4), 3, True),
+#     ('button-press-wall-v2', np.zeros(4), 3, True),
+#     ('coffee-button-v2', np.zeros(4), 3, True),
+#     ('coffee-pull-v2', np.zeros(4), 3, True),
+#     ('coffee-push-v2', np.zeros(4), 3, True),
+#     ('dial-turn-v2', np.zeros(4), 3, True),
+#     ('disassemble-v2', np.zeros(4), 3, True),
+#     ('door-close-v2', np.zeros(4), 3, True),
+#     ('door-lock-v2', np.zeros(4), 3, True),
+#     ('door-open-v2', np.zeros(4), 3, True),
+#     ('door-unlock-v2', np.zeros(4), 3, True),
+#     ('hand-insert-v2', np.zeros(4), 3, True),
+#     ('drawer-close-v2', np.zeros(4), 3, True),
+#     ('drawer-open-v2', np.zeros(4), 3, True),
+#     ('faucet-open-v2', np.zeros(4), 3, True),
+#     ('faucet-close-v2', np.zeros(4), 3, True),
+#     ('hammer-v2', np.zeros(4), 3, True),
+#     ('handle-press-side-v2', np.zeros(4), 3, True),
+#     ('handle-press-v2', np.zeros(4), 3, True),
+#     ('handle-pull-side-v2', np.zeros(4), 3, True),
+#     ('handle-pull-v2', np.zeros(4), 3, True),
+#     ('lever-pull-v2', np.zeros(4), 3, True),
+#     ('peg-insert-side-v2', np.zeros(4), 3, True),
+#     ('pick-place-wall-v2', np.zeros(4), 3, True),
+#     ('pick-out-of-hole-v2', np.zeros(4), 3, True),
+#     ('reach-v2', np.zeros(4), 3, True),
+#     ('push-back-v2', np.zeros(4), 3, True),
+#     ('push-v2', np.zeros(4), 3, True),
+#     ('pick-place-v2', np.zeros(4), 3, True),
+#     ('plate-slide-v2', np.zeros(4), 3, True),
+#     ('plate-slide-side-v2', np.zeros(4), 3, True),
+#     ('plate-slide-back-v2', np.zeros(4), 3, True),
+#     ('plate-slide-back-side-v2', np.zeros(4), 3, True),
+#     ('peg-unplug-side-v2', np.zeros(4), 3, True),
+#     ('soccer-v2', np.zeros(4), 3, True),
+#     ('stick-push-v2', np.zeros(4), 3, True),
+#     ('stick-pull-v2', np.zeros(4), 3, True),
+#     ('push-wall-v2', np.zeros(4), 3, True),
+#     ('reach-wall-v2', np.zeros(4), 3, True),
+#     ('shelf-place-v2', np.zeros(4), 3, True),
+#     ('sweep-into-v2', np.zeros(4), 3, True),
+#     ('sweep-v2', np.zeros(4), 3, True),
+#     ('window-open-v2', np.zeros(4), 3, True),
+#     ('window-close-v2', np.zeros(4), 3, True),
+# ]
 
-env_names = [x[0] for x in env_configs]
+env_names = MT1.ENV_NAMES
 
-def generate_env_and_renderer(env_index = 0):
+def generate_env_and_renderer(env_index = 0, height=240, width: int = 320):
     # setup env
-    env_name = MT1.ENV_NAMES[env_index]
+    env_name = env_names[env_index]
     env_scripted_policy = policies[env_name]
     mt1 = MT1(env_name)
     env = mt1.train_classes[env_name]()
@@ -203,12 +204,14 @@ def generate_env_and_renderer(env_index = 0):
     env._partially_observable = False
     env._freeze_rand_vec = False
     env._set_task_called = True
+    env._random_reset_space = reset_space.get_custom_random_reset_space(env_name)
 
     env.reset_model()
     env.reset()
 
     # renderer
-    renderer = env_renderer.EnvRenderer(env, camera_name="keyframes")
-    env.model.camera("keyframes").quat = [1,0.17,0,0]
+    # NOTE keyframes camera defined in metaworld/envs/assets_v2/objects/assets/xyz_base.xml
+    renderer = env_renderer.EnvRenderer(env, camera_name="keyframes", height=height, width=width)
+    # env.model.camera("keyframes").quat = [1,0.17,0,0]
 
     return env, env_scripted_policy, renderer

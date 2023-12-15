@@ -1,0 +1,35 @@
+dataset_args:
+  data_folder: /media/user/ssd2t/datasets2/metaworld_keyframes/all_envs
+  train_env_ids: [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26, 27, 28, 29, 30, 32, 33, 34, 35, 36, 37, 38, 39, 40, 43, 44]
+  val_env_ids: [45, 46, 47, 48, 49]
+  eps: 0.01
+  max_keypoints: 100
+
+  
+model_args:
+  conf:
+    n_layers: 9
+
+
+optimizer_args:
+  # adamw optimizer
+  lr: 1.3e-4  # default of nanoGPT is 6e-4, minimum learning rate is 6e-5
+  # milestones: [1000,1500,20000]
+  # gamma: 0.1
+  warmup: 250  # default of nanoGPT is 2000
+  max_iters: 1200000  # default of nanoGPT is 600'000
+  start_iter: 0
+
+
+training:
+  init_from: scratch
+  # init_from: /home/user/Documents/projects/osil/img_manuals/7w1myzhh/checkpoints/epoch=3-step=712.ckpt # scratch, resume. Always specify yaml file name of previous version if init_from = resume
+  batch_size: 12  # default of nanoGPT is 12
+  precision: 16-mixed
+  accumulate_grad_batches: 3  # no memory overhead, default of nanoGPT is 5*8
+  gradient_clip_val: 0.5  # default of nanoGPT is 1.0
+  num_workers: 6
+  max_epochs: 1000
+
+meta:
+  description: Initial Try

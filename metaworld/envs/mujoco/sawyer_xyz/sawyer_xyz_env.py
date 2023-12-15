@@ -101,6 +101,7 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
     classes = None
     classes_kwargs = None
     tasks = None
+    reset_hand = False
 
     def __init__(
         self,

@@ -29,7 +29,7 @@ class SawyerBoxCloseEnvV2(SawyerXYZEnv):
             self.tasks = tasks
 
         self.init_config = {
-            "obj_init_angle": 0.3,
+            "obj_init_angle": 0.0,
             "obj_init_pos": np.array([0, 0.55, 0.02], dtype=np.float32),
             "hand_init_pos": np.array((0, 0.6, 0.2), dtype=np.float32),
         }
@@ -82,13 +82,15 @@ class SawyerBoxCloseEnvV2(SawyerXYZEnv):
         return self.unwrapped.model.geom_name2id("BoxHandleGeom")
 
     def _get_pos_objects(self):
-        return self.get_body_com("top_link")
+        # return self.get_body_com("top_link")
+        return self.get_body_com("boxbodytop")
 
     def _get_quat_objects(self):
-        return self.data.body("top_link").xquat
+        # return self.data.body("top_link").xquat
+        return self.data.body("boxbodytop").xquat
 
     def reset_model(self):
-        self._reset_hand()
+        # self._reset_hand()
         self.obj_init_pos = self.init_config["obj_init_pos"]
         self.obj_init_angle = self.init_config["obj_init_angle"]
         box_height = self.get_body_com("boxbody")[2]
@@ -99,12 +101,11 @@ class SawyerBoxCloseEnvV2(SawyerXYZEnv):
         self.obj_init_pos = np.concatenate((goal_pos[:2], [self.obj_init_pos[-1]]))
         self._target_pos = goal_pos[-3:]
 
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "boxbody")
-        ] = np.concatenate((self._target_pos[:2], [box_height]))
+        self.model.body("boxbody").pos = np.concatenate((self._target_pos[:2], [box_height]))
 
-        for _ in range(self.frame_skip):
-            mujoco.mj_step(self.model, self.data)
+        # TODO frame skip shouldn't be called here
+        # for _ in range(self.frame_skip):
+        #     mujoco.mj_step(self.model, self.data)
 
         self._set_obj_xyz(self.obj_init_pos)
 

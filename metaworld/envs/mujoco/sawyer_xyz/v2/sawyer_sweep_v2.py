@@ -99,6 +99,7 @@ class SawyerSweepEnvV2(SawyerXYZEnv):
         )
         self.target_reward = 1000 * self.maxPushDist + 1000 * 2
         self.model.site("goal").pos = self._target_pos
+        self.model.geom("goal_geom").pos = self._target_pos
 
         return self._get_obs()
 

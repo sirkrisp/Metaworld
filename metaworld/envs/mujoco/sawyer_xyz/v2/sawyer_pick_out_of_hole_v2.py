@@ -106,6 +106,7 @@ class SawyerPickOutOfHoleEnvV2(SawyerXYZEnv):
         self._target_pos = pos_goal
 
         self.model.site("goal").pos = pos_goal
+        self.model.geom("goal_geom").pos = pos_goal
 
         return self._get_obs()
 

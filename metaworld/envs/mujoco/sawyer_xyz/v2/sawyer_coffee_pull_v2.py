@@ -105,9 +105,8 @@ class SawyerCoffeePullEnvV2(SawyerXYZEnv):
         self.obj_init_pos = pos_mug_init
 
         pos_machine = pos_mug_init + np.array([0.0, 0.22, 0.0])
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "coffee_machine")
-        ] = pos_machine
+        self.model.body("coffee_machine").pos = pos_machine
+        self.model.geom("goal_geom").pos = pos_mug_goal
 
         self._target_pos = pos_mug_goal
         return self._get_obs()

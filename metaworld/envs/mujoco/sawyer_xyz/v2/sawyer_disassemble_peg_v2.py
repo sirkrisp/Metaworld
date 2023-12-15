@@ -95,7 +95,8 @@ class SawyerNutDisassembleEnvV2(SawyerXYZEnv):
         return obs_dict
 
     def reset_model(self):
-        self._reset_hand()
+        if self.reset_hand:
+            self._reset_hand()
         self._target_pos = self.goal.copy()
         self.obj_init_pos = np.array(self.init_config["obj_init_pos"])
         self.obj_init_angle = self.init_config["obj_init_angle"]
@@ -108,12 +109,8 @@ class SawyerNutDisassembleEnvV2(SawyerXYZEnv):
 
         peg_pos = self.obj_init_pos + np.array([0.0, 0.0, 0.03])
         peg_top_pos = self.obj_init_pos + np.array([0.0, 0.0, 0.08])
-        self.model.body_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "peg")
-        ] = peg_pos
-        self.model.site_pos[
-            mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "pegTop")
-        ] = peg_top_pos
+        self.model.body("peg").pos = peg_pos
+        self.model.site("pegTop").pos = peg_top_pos
         mujoco.mj_forward(self.model, self.data)
         self._set_obj_xyz(self.obj_init_pos)
         return self._get_obs()

@@ -2,10 +2,13 @@ import env_renderer
 import mujoco_utils
 import numpy as np
 import mujoco
+import utils.slam_utils as slam_utils
 
 def generate_keyframes(env, renderer):
     # reset env
     env.reset()
+    # TODO why needed?
+    mujoco.mj_resetData(env.model, env.data)
 
     # do not visualize robot bodies and sites
     root_node, node_map = mujoco_utils.build_mj_tree(env.model)
@@ -15,8 +18,8 @@ def generate_keyframes(env, renderer):
     mujoco_utils.toggle_sites_visibility(env.model, False)
     siteSet = set(mujoco_utils.get_site_names(env.model))
     # TODO only visualize goal if env.show_goal is True
-    if "goal" in siteSet:
-        env.model.site("goal").rgba = [0,0,1,1]
+    # if "goal" in siteSet:
+    #     env.model.site("goal").rgba = [0,0,1,1]
     mujoco_utils.toggle_visibility(env.model, name2node["base"], False)
 
     # generate keyframes
@@ -37,8 +40,8 @@ def generate_keyframes(env, renderer):
             keyframes_data[k].append(render_data[k])
 
         # geom positions and rotations
-        keyframes_data["geom_xpos"].append(env.data.geom_xpos[:])
-        keyframes_data["geom_xmat"].append(env.data.geom_xmat[:])
+        keyframes_data["geom_xpos"].append(env.data.geom_xpos.copy())
+        keyframes_data["geom_xmat"].append(env.data.geom_xmat.copy())
         
     for k in keyframes_data.keys():
         keyframes_data[k] = np.array(keyframes_data[k])
@@ -46,4 +49,18 @@ def generate_keyframes(env, renderer):
     return keyframes_data
 
 
+def generate_keyframe_data_with_features(env, renderer, extractor):
+    keyframe_data = generate_keyframes(env, renderer)
+    keypoints = []
+    keypoint_scores = []
+    descriptors = []
+    for i in range(2):
+        fts = slam_utils.compute_features(extractor, keyframe_data["img"][i])
+        keypoints.append(fts["keypoints"].cpu().numpy())
+        keypoint_scores.append(fts["keypoint_scores"].cpu().numpy())
+        descriptors.append(fts["descriptors"].cpu().numpy())
+    keyframe_data["keypoints"] = keypoints
+    keyframe_data["keypoint_scores"] = keypoint_scores
+    keyframe_data["descriptors"] = descriptors
+    return keyframe_data
 

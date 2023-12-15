@@ -141,6 +141,7 @@ class SawyerPickPlaceEnvV2(SawyerXYZEnv):
         self._set_obj_xyz(self.obj_init_pos)
 
         self.model.site("goal").pos = goal_pos[-3:]
+        self.model.geom("goal_geom").pos = goal_pos[-3:]
 
         return self._get_obs()
 
