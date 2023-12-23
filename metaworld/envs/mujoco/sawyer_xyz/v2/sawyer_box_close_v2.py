@@ -100,7 +100,7 @@ class SawyerBoxCloseEnvV2(SawyerXYZEnv):
             goal_pos = self._get_state_rand_vec()
         self.obj_init_pos = np.concatenate((goal_pos[:2], [self.obj_init_pos[-1]]))
         self._target_pos = goal_pos[-3:]
-
+        self.model.site("goal").pos = self._target_pos
         self.model.body("boxbody").pos = np.concatenate((self._target_pos[:2], [box_height]))
 
         # TODO frame skip shouldn't be called here

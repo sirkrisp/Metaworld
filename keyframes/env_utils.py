@@ -2,8 +2,12 @@ import numpy as np
 
 import pytest
 
-import env_renderer
+import keyframes.env_renderer as env_renderer
 import keyframes.reset_space as reset_space
+import keyframes.policies.agent as agent
+from metaworld.envs.mujoco.sawyer_xyz.sawyer_xyz_env import (
+    SawyerXYZEnv,
+)
 
 from metaworld import MT1
 from metaworld.policies import (
@@ -194,7 +198,21 @@ def test_policy(env_name):
 
 env_names = MT1.ENV_NAMES
 
-def generate_env_and_renderer(env_index = 0, height=240, width: int = 320):
+def generate_env_and_renderer(env_index = 0, height=240, width: int = 320, camera_name="keyframes"):
+    """
+    Args:
+        NOTE: see metaworld/envs/assets_v2/objects/assets/xyz_base.xml
+            <camera pos="0 0.5 1.5" name="topview"/>
+            <!-- <camera name="keyframes" mode="fixed" pos="0 0.0 1.5"  euler="0.6 0 0"/> -->
+            
+            <camera name="keyframes" mode="fixed" pos="0 0.0 1.5" quat="1 0.17 0 0"/>
+            <camera name="corner" mode="fixed" pos="-1.1 -0.4 0.6" xyaxes="-1 1 0 -0.2 -0.2 -1"/>
+            <camera name="corner2" fovy="60" mode="fixed" pos="1.3 -0.2 1.1" euler="3.9 2.3 0.6"/>
+            <camera name="corner3" fovy="45" mode="fixed" pos="0.9 0 1.5" euler="3.5 2.7 1"/>
+        camera_name: topview, keyframes, corner, corner2, corner3
+    """
+
+
     # setup env
     env_name = env_names[env_index]
     env_scripted_policy = policies[env_name]
@@ -205,13 +223,45 @@ def generate_env_and_renderer(env_index = 0, height=240, width: int = 320):
     env._freeze_rand_vec = False
     env._set_task_called = True
     env._random_reset_space = reset_space.get_custom_random_reset_space(env_name)
+    env.hand_init_pos = reset_space.get_random_hand_init_pos()
 
     env.reset_model()
     env.reset()
 
     # renderer
     # NOTE keyframes camera defined in metaworld/envs/assets_v2/objects/assets/xyz_base.xml
-    renderer = env_renderer.EnvRenderer(env, camera_name="keyframes", height=height, width=width)
+    renderer = env_renderer.EnvRenderer(env, camera_name=camera_name, height=height, width=width)
     # env.model.camera("keyframes").quat = [1,0.17,0,0]
 
     return env, env_scripted_policy, renderer
+
+
+def go_forward(
+    env: SawyerXYZEnv,
+    renderer: env_renderer.EnvRenderer = None,
+    agent: agent.Agent = None,
+    n_steps=10,
+):
+    imgs = []
+    o = env._prev_obs
+    for i in range(n_steps):
+        if agent is None:
+            a = np.array([0, 0, 0, 0])
+        else:
+            a = agent.get_action(o)
+        # a = np.array([0,0.1,0,0])
+        # print("action", a, o[:3])
+        o, r, _, done, info = env.step(a)
+        if done or info["success"] > 0:
+            print("done", info["success"] > 0, i)
+            break
+        if renderer is not None:
+            imgs.append(renderer.render()["img"].copy())
+    records = {
+        "imgs": imgs,
+        "o": o,
+        "r": r,
+        "done": done,
+        "info": info,
+    }
+    return records

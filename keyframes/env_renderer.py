@@ -10,7 +10,7 @@ class EnvRenderer:
 
     def render(self, camera_name=None, depth=False, segmentation=False):
         # mujoco.mj_forward(self.env.model, self.env.data)
-        self.renderer.update_scene(self.env.data, self.camera_name if camera_name is None else self.camera_name)
+        self.renderer.update_scene(self.env.data, self.camera_name if camera_name is None else camera_name)
         img = self.renderer.render()
         data = {"img": img}
         if depth:

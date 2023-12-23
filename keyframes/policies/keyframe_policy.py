@@ -2,6 +2,7 @@ import utils.inference_utils as inference_utils
 import keyframes.pl_modules as pl_modules
 import utils.slam_utils as slam_utils
 import utils.depth_utils as depth_utils
+import utils.predict_utils as predict_utils
 import keyframes.grasp_pose as grasp_pose
 import keyframes.policies.pick_place_policy as pick_place_policy
 import numpy as np
@@ -144,12 +145,17 @@ class KeyframePolicy:
 
     
     def _get_pick_place_policy(self, img_cur, depth_cur, pred_res):
-        xyz = depth_utils.pixel_coords_to_world_coords_simple(
+        xyz = depth_utils.pixel_coords_to_world_coords(
             self.T_pixel2world, 
             depth_cur,
         )[:,:3]
-        grasp_point = self.grasp_pose_estimator.predict_grasp_point(img_cur, xyz, pred_res["kpts"]["kpts_2_0"])
-        target_point = grasp_point + pred_res["T"]["t_no_rot_closest"]
+        grasp_point_res = self.grasp_pose_estimator.predict_grasp_point(img_cur, xyz, pred_res["kpts"]["kpts_2_0"])
+        R_closest, t_closest, t_no_rot_closest, x_center, moving_fts_inter_frame_transform = predict_utils.compute_T(
+            pred_res["kpts"]["wpos_kpts_2_0"], 
+            pred_res["kpts"]["wpos_kpts_2_1"]
+        )
+        grasp_point = grasp_point_res["grasp_point"]
+        target_point = moving_fts_inter_frame_transform(grasp_point)
         return pick_place_policy.PickPlacePolicy(grasp_point, target_point)
 
 

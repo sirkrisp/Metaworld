@@ -91,8 +91,8 @@ class ReconstructMCC:
         occupy_threshold = self.compute_occupy_threshold()
         n_cube = int(np.round(pred_occupy.shape[0] ** (1/3)))
         verts, faces, vert_normals, values = measure.marching_cubes(-pred_occupy.cpu().numpy().reshape(n_cube,n_cube,n_cube), level=-occupy_threshold)
-        verts = verts - 80/2
-        verts *= 2 / 80  # grid_size is 2
+        verts = verts - n_cube/2
+        verts *= 2 / n_cube  # grid_size is 2
         return pred_occupy, pred_colors, occupy_threshold, verts, faces, vert_normals, values
     
     def normalize(self, xyz):

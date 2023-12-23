@@ -97,8 +97,7 @@ class SawyerCoffeeButtonEnvV2(SawyerXYZEnv):
         self.set_state(qpos, qvel)
 
     def reset_model(self):
-        if self.reset_hand:
-            self._reset_hand()
+        self._reset_hand()
 
         self.obj_init_pos = self._get_state_rand_vec()
         self.model.body("coffee_machine").pos = self.obj_init_pos

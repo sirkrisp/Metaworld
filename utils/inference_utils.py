@@ -1,3 +1,4 @@
+from turtle import st
 import torch
 import numpy as np
 from dataclasses import dataclass
@@ -8,17 +9,18 @@ from lightglue import viz2d
 import utils.match_utils as match_utils
 import utils.depth_utils as depth_utils
 import utils.predict_utils as predict_utils
+import utils.torch_utils as torch_utils
+import utils.slam_utils as slam_utils
 
 DEVICE="cuda"
 
 
-def load_config(sub_project_name, config_id):
+def load_config(sub_project_name, config_id, ROOT_DIR="/home/user/Documents/projects/Metaworld"):
 
     SUB_PROJECT_NAME = sub_project_name
     CONFIG_IDX = config_id
 
     # do not change
-    ROOT_DIR = f"/home/user/Documents/projects/Metaworld"
     SUB_PROJECT_DIR = f"{ROOT_DIR}/keyframes/{SUB_PROJECT_NAME}"
     CONFIG_PATH = f"{SUB_PROJECT_DIR}/configs/config_{SUB_PROJECT_NAME}_{CONFIG_IDX}.yaml"
 
@@ -120,19 +122,30 @@ def predictions_to_match_data(match_data_gt: MatchData, predictions, b=0):
     return match_data_pred
 
 
+@dataclass
+class MatchDataNP:
+    keypoints_0: np.ndarray
+    keypoints_1: np.ndarray
+    descriptors_0: np.ndarray
+    descriptors_1: np.ndarray
+    matches_0: np.ndarray
+    matches_1: np.ndarray
+    assignment_mtr: np.ndarray
+
 def predictions_to_match_data_v2(model_input, predictions, b=0):
     # see pl_module pre_step
     args_pred = {
-        "keypoints_0": model_input["keypoints_0"],
-        "keypoints_1": model_input["keypoints_1"],
-        "descriptors_0": model_input["descriptors_0"],
-        "descriptors_1": model_input["descriptors_1"],
+        "keypoints_0": model_input["keypoints0"][b],
+        "keypoints_1": model_input["keypoints1"][b],
+        "descriptors_0": model_input["descriptors0"][b],
+        "descriptors_1": model_input["descriptors1"][b],
         "matches_0": predictions["matches0"][b],
         "matches_1": predictions["matches1"][b],
-        # TODO
-        "assignment_mtr": predictions["assignment_mtr"][b],
+        # TODO use assignment_mtr from predictions!!
+        "assignment_mtr": model_input["gt_assignment"][b],
     }
-    match_data_pred = MatchData(**args_pred)
+    args_pred = torch_utils.to_numpy(args_pred)
+    match_data_pred = MatchDataNP(**args_pred)
     return match_data_pred
 
 
@@ -172,15 +185,15 @@ def match_data_to_model_input(match_data: MatchData, image_size=(360,480)):
     return args
 
 
-def get_model_input_v2(kpts_0, kpts_1, desc_0, desc_1, image_size=(360,480)):
-    matches_0 = -np.ones(kpts_0.shape[0])
-    matches_1 = -np.ones(kpts_1.shape[0])
-    assignment_mtr = np.zeros((kpts_0.shape[0], kpts_1.shape[0]))
+def get_model_input_v2(kpts_0: torch.Tensor, kpts_1: torch.Tensor, desc_0: torch.Tensor, desc_1: torch.Tensor, image_size=(360,480), device="cuda"):
+    matches_0 = -torch.ones(kpts_0.shape[0])
+    matches_1 = -torch.ones(kpts_1.shape[0])
+    assignment_mtr = torch.zeros((kpts_0.shape[0], kpts_1.shape[0]))
     args = {
-        "keypoints0": kpts_0[None,:],
-        "descriptors0": desc_0[None,:],
-        "keypoints1": kpts_1[None,:],
-        "descriptors1": desc_1[None,:],
+        "keypoints0": kpts_0[None,:].to(device),
+        "descriptors0": desc_0[None,:].to(device),
+        "keypoints1": kpts_1[None,:].to(device),
+        "descriptors1": desc_1[None,:].to(device),
         "view0": {
             "image_size": image_size
         },
@@ -188,9 +201,9 @@ def get_model_input_v2(kpts_0, kpts_1, desc_0, desc_1, image_size=(360,480)):
             "image_size": image_size
         },
         # dummy data
-        "gt_matches0": matches_0[None,:],
-        "gt_matches1": matches_1[None,:],
-        "gt_assignment": assignment_mtr[None,:],
+        "gt_matches0": matches_0[None,:].to(device),
+        "gt_matches1": matches_1[None,:].to(device),
+        "gt_assignment": assignment_mtr[None,:].to(device),
     }
     return args
     
@@ -304,22 +317,22 @@ def predict_feature_movement(model, extractor, ngeom, keyframe_data_0, keyframe_
     match_data_1 = match_lightglue_finetuned(model, match_data_1_gt)
 
     # world coords for keypoints
-    wpos_kpts_0_0 = depth_utils.pixel_coords_to_world_coords_simple(
+    wpos_kpts_0_0 = depth_utils.pixel_coords_to_world_coords(
         T_pixel2world, 
         image_data_0_0.depth,
         match_data_0.keypoints_0.numpy()
     )[:,:3]
-    wpos_kpts_0_1 = depth_utils.pixel_coords_to_world_coords_simple(
+    wpos_kpts_0_1 = depth_utils.pixel_coords_to_world_coords(
         T_pixel2world, 
         image_data_0_1.depth,
         match_data_0.keypoints_1.numpy()
     )[:,:3]
-    wpos_kpts_1_0 = depth_utils.pixel_coords_to_world_coords_simple(
+    wpos_kpts_1_0 = depth_utils.pixel_coords_to_world_coords(
         T_pixel2world, 
         image_data_1_0.depth,
         match_data_1.keypoints_0.numpy()
     )[:,:3]
-    wpos_kpts_1_1 = depth_utils.pixel_coords_to_world_coords_simple(
+    wpos_kpts_1_1 = depth_utils.pixel_coords_to_world_coords(
         T_pixel2world, 
         image_data_1_1.depth,
         match_data_1.keypoints_1.numpy()
@@ -415,45 +428,51 @@ def predict_feature_movement(model, extractor, ngeom, keyframe_data_0, keyframe_
 
 
 
+# TODO for simplicity, maybe it would be better to use numpy only
 def predict_feature_movement_v2(
     model_ft,
     depth_ref_0: np.ndarray,
     depth_ref_1: np.ndarray,
     depth_cur: np.ndarray,
-    desc_ref_0: torch.Tensor,
-    desc_cur: torch.Tensor,
-    kpts_ref_0: torch.Tensor,
-    kpts_ref_1: torch.Tensor,
-    kpts_cur: torch.Tensor,
-    T_world2pixel: torch.Tensor,
-    match_data_0: MatchData,
+    desc_ref_0: np.ndarray,
+    desc_cur: np.ndarray,
+    kpts_ref_0: np.ndarray,
+    kpts_ref_1: np.ndarray,
+    kpts_cur: np.ndarray,
+    T_world2pixel: np.ndarray,
+    match_data_0: MatchDataNP,
 ):
-    T_pixel2world = torch.inverse(T_world2pixel)
+    T_pixel2world = np.linalg.inv(T_world2pixel)
 
     # match features
     
     # 1) match between ref_0 and cur
-    model_input_1 = get_model_input_v2(kpts_ref_0, kpts_cur, desc_ref_0, desc_cur)
+    model_input_1 = get_model_input_v2(
+        torch_utils.to_torch(kpts_ref_0, device=model_ft.device), 
+        torch_utils.to_torch(kpts_cur, device=model_ft.device), 
+        torch_utils.to_torch(desc_ref_0, device=model_ft.device), 
+        torch_utils.to_torch(desc_cur, device=model_ft.device)
+    )
     match_data_1 = match_lightglue_finetuned_v2(model_ft, model_input_1)
 
     # world coords for keypoints
     # 0) match between ref_0 and ref_1
-    wpos_kpts_0_0 = depth_utils.pixel_coords_to_world_coords_simple(
-        T_pixel2world, 
+    wpos_kpts_0_0 = depth_utils.pixel_coords_to_world_coords(
+        T_pixel2world,
         depth_ref_0,
-        kpts_ref_0.numpy()
+        kpts_ref_0
     )[:,:3]
-    wpos_kpts_0_1 = depth_utils.pixel_coords_to_world_coords_simple(
+    wpos_kpts_0_1 = depth_utils.pixel_coords_to_world_coords(
         T_pixel2world, 
         depth_ref_1,
-        kpts_ref_1.numpy()
+        kpts_ref_1
     )[:,:3]
     # 1) match between ref_0 and cur
-    wpos_kpts_1_0 = np.clone(wpos_kpts_0_0)
-    wpos_kpts_1_1 = depth_utils.pixel_coords_to_world_coords_simple(
+    wpos_kpts_1_0 = wpos_kpts_0_0.copy()
+    wpos_kpts_1_1 = depth_utils.pixel_coords_to_world_coords(
         T_pixel2world, 
         depth_cur,
-        kpts_cur.numpy()
+        kpts_cur
     )[:,:3]
 
 
@@ -507,7 +526,11 @@ def predict_feature_movement_v2(
     m_closest_1_0_to_1_1 = np.array(m_closest_1_0_to_1_1)
 
     # compute transformation of closest point matches
-    R_closest, t_closest, t_no_rot_closest, x_center, predict_closest = predict_utils.compute_T(
+    # R_closest, t_closest, t_no_rot_closest, x_center, predict_closest = predict_utils.compute_T(
+    #     wpos_kpts_1_0[m_closest_1_0_to_1_1[:,0]], 
+    #     wpos_kpts_1_1[m_closest_1_0_to_1_1[:,1]]
+    # )
+    t_closest, predict_closest = predict_utils.estimate_translation(
         wpos_kpts_1_0[m_closest_1_0_to_1_1[:,0]], 
         wpos_kpts_1_1[m_closest_1_0_to_1_1[:,1]]
     )
@@ -521,10 +544,10 @@ def predict_feature_movement_v2(
 
     return {
         "T": {
-            "R_closest": R_closest,
+            # "R_closest": R_closest,
             "t_closest": t_closest,
-            "t_no_rot_closest": t_no_rot_closest,
-            "x_center": x_center,
+            # "t_no_rot_closest": t_no_rot_closest,
+            # "x_center": x_center,
         },
         "kpts": {
             "kpts_2_0": kpts_2_0,
@@ -533,5 +556,70 @@ def predict_feature_movement_v2(
             "wpos_kpts_2_1": wpos_kpts_2_1,
         },
     }
+
+
+def get_ref_data(model_fts_extract, model_fts_match, img_ref_0, img_ref_1, depth_ref_0, depth_ref_1):
+    fts_ref_0 = slam_utils.compute_features(model_fts_extract, img_ref_0)
+    fts_ref_1 = slam_utils.compute_features(model_fts_extract, img_ref_1)
+    kpts_ref_0 = fts_ref_0["keypoints"]
+    kpts_ref_1 = fts_ref_1["keypoints"]
+    desc_ref_0 = fts_ref_0["descriptors"]
+    desc_ref_1 = fts_ref_1["descriptors"]
+    kpts_scores_ref_0 = fts_ref_0["keypoint_scores"]
+    kpts_scores_ref_1 = fts_ref_1["keypoint_scores"]
+    # 0) match between ref_0 and ref_1
+    # TODO get_model_input_v2: take fts as input
+    model_input_0 = get_model_input_v2(kpts_ref_0, kpts_ref_1, desc_ref_0, desc_ref_1)
+    match_data_0 = match_lightglue_finetuned_v2(model_fts_match, model_input_0)
+    ref_data = {
+        "img_ref_0": img_ref_0,
+        "img_ref_1": img_ref_1,
+        "depth_ref_0": depth_ref_0,
+        "depth_ref_1": depth_ref_1,
+        "fts_ref_0": fts_ref_0,
+        "fts_ref_1": fts_ref_1,
+        "kpts_ref_0": kpts_ref_0,
+        "kpts_ref_1": kpts_ref_1,
+        "desc_ref_0": desc_ref_0,
+        "desc_ref_1": desc_ref_1,
+        "kpts_scores_ref_0": kpts_scores_ref_0,
+        "kpts_scores_ref_1": kpts_scores_ref_1,
+        "match_data_0": match_data_0,
+    }
+    return torch_utils.to_numpy(ref_data)
+
+
+def predict_feature_movement_from_ref_data(
+    model_fts_extract, 
+    model_fts_match, 
+    T_world2pixel: np.ndarray,
+    img_cur: np.ndarray, 
+    depth_cur: np.ndarray,
+    ref_data
+):
+
+    # compute features
+    fts_cur = slam_utils.compute_features(model_fts_extract, img_cur)
+    fts_cur = torch_utils.to_numpy(fts_cur)
+    kpts_cur = fts_cur["keypoints"]
+    desc_cur = fts_cur["descriptors"]
+    kpts_scores_cur = fts_cur["keypoint_scores"]
+
+    # predict feature movement
+    pred_res = predict_feature_movement_v2(
+        model_fts_match,
+        depth_ref_0=ref_data["depth_ref_0"],
+        depth_ref_1=ref_data["depth_ref_1"],
+        depth_cur=depth_cur,
+        desc_ref_0=ref_data["desc_ref_0"],
+        desc_cur=desc_cur,
+        kpts_ref_0=ref_data["kpts_ref_0"],
+        kpts_ref_1=ref_data["kpts_ref_1"],
+        kpts_cur=kpts_cur,
+        T_world2pixel=T_world2pixel,
+        match_data_0=ref_data["match_data_0"],
+    )
+
+    return pred_res
 
     

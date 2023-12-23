@@ -1,8 +1,9 @@
-import env_renderer
-import mujoco_utils
+import keyframes.env_renderer as env_renderer
+import keyframes.mujoco_utils as mujoco_utils
 import numpy as np
 import mujoco
 import utils.slam_utils as slam_utils
+import keyframes.env_utils as env_utils
 
 def generate_keyframes(env, renderer):
     # reset env
@@ -46,7 +47,36 @@ def generate_keyframes(env, renderer):
     for k in keyframes_data.keys():
         keyframes_data[k] = np.array(keyframes_data[k])
 
+    # TODO what about sites?
+    mujoco_utils.toggle_visibility(env.model, name2node["base"], True)
+
     return keyframes_data
+
+
+def generate_cur_keyframe(env, renderer):
+    o = env.reset()
+    # TODO forward sim
+    mujoco.mj_resetData(env.model, env.data)
+    o = env_utils.go_forward(env, n_steps=100)["o"]
+    # do not visualize robot bodies and sites
+    root_node, node_map = mujoco_utils.build_mj_tree(env.model)
+    name2node = {}
+    for node in node_map.values():
+        name2node[node.name] = node
+    mujoco_utils.toggle_sites_visibility(env.model, False)
+    siteSet = set(mujoco_utils.get_site_names(env.model))
+    # TODO only visualize goal if env.show_goal is True
+    # if "goal" in siteSet:
+    #     env.model.site("goal").rgba = [0,0,1,1]
+    mujoco_utils.toggle_visibility(env.model, name2node["base"], False)
+
+    mujoco.mj_forward(env.model, env.data)
+    render_data = renderer.render(depth=True, segmentation=False)
+
+    mujoco_utils.toggle_visibility(env.model, name2node["base"], True)
+
+    return render_data["img"], render_data["depth"]
+
 
 
 def generate_keyframe_data_with_features(env, renderer, extractor):

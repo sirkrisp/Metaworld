@@ -10,7 +10,7 @@ def sample_hand_pos_around_object(obj_pos):
         point = low + np.random.uniform(0, 1, 3) * (high - low)
     return point
 
-def get_random_hand_init_pos(low = np.array([-0.5, 0.3, 0.1]), high = np.array([0.5, 1.0, 0.5])):
+def get_random_hand_init_pos(low = np.array([-0.1, 0.3, 0.2]), high = np.array([0.1, 0.4, 0.2])):
     return low + np.random.uniform(0, 1, 3) * (high - low)
 
 def get_custom_random_reset_space(task):
@@ -38,10 +38,10 @@ def get_custom_random_reset_space(task):
         goal_high = (0.1201, 0.8, +0.001)
     elif task == 'box-close-v2':
         # TODO Z coordinate seems to have no impact
-        obj_low = (-0.3, 0.45, 0.02)
-        obj_high = (0.3, 0.5, 0.02)
-        goal_low = (-0.2, 0.7, 0.133)
-        goal_high = (0.2, 0.8, 0.133)
+        obj_low = (-0.3, 0.63, 0.02)
+        obj_high = (0.3, 0.63, 0.02)
+        goal_low = (-0.2, 0.87, 0.133)
+        goal_high = (0.2, 0.87, 0.133)
     elif task == 'button-press-topdown-v2':
         obj_low = (-0.4, 0.7, 0.115)
         obj_high = (0.4, 0.85, 0.115)

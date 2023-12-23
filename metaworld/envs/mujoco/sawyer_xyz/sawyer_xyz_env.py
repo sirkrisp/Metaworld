@@ -466,6 +466,19 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
 
     @_assert_task_is_set
     def step(self, action):
+        """
+        Args:
+            action(np.ndarray): (4,) array representing the action
+                delta(x), delta(y), delta(z), gripper_effort
+        Returns:
+            np.ndarray: (39,) array representing the observation
+            float: Reward between 0 and 10
+            bool: truncate always False
+            bool: Whether the episode is over
+            dict: Dictionary which contains useful metrics (success,
+                near_object, grasp_success, grasp_reward, in_place_reward,
+                obj_to_target, unscaled_reward)
+        """
         assert len(action) == 4, f"Actions should be size 4, got {len(action)}"
         self.set_xyz_action(action[:3])
         if self.curr_path_length >= self.max_path_length:

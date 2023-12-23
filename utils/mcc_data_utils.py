@@ -46,13 +46,15 @@ def compute_masked_mean_and_max_dist(img: np.ndarray, xyz: np.ndarray, seg: np.n
         xyz: (H*W, 3)
         seg: (H, W)
     """
-    depth_pts = xyz.reshape(img.shape)
-    img_height, img_width = img.shape[:2]
-    mask = cv2.resize(seg.astype(float), (img_width, img_height)).astype(bool) # NOTE width first due to cv2
-    depth_pts[~mask] = float('inf')
+    # depth_pts = xyz.reshape(img.shape)
+    # img_height, img_width = img.shape[:2]
+    # mask = cv2.resize(seg.astype(float), (img_width, img_height)).astype(bool) # NOTE width first due to cv2
+    # depth_pts[~mask] = float('inf')
 
-    masked_mean = depth_pts[mask].mean(axis=0)
-    masked_max_dist = np.max(np.abs(depth_pts[mask]) - masked_mean)
+    xyz_masked = xyz[seg.flatten().astype(bool)]
+
+    masked_mean = np.mean(xyz_masked, axis=0)
+    masked_max_dist = np.max(np.abs(xyz_masked - masked_mean))
 
     return masked_mean, masked_max_dist
 

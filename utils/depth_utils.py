@@ -28,7 +28,7 @@ def pixel_coords_to_world_coords_simple(T_pixel2world, real_depth, pixel_coords_
     return world_coords
 
 
-def pixel_coords_to_world_coords(T_pixel2world, real_depth, pixel_coords_xy = None):
+def pixel_coords_to_world_coords(T_pixel2world: np.ndarray, real_depth: np.ndarray, pixel_coords_xy: np.ndarray = None, return_adjusted_pixel_coords_xy=False):
     """
     Convert image coordinates to world coordinates.
 
@@ -42,6 +42,8 @@ def pixel_coords_to_world_coords(T_pixel2world, real_depth, pixel_coords_xy = No
         x = np.linspace(0, real_depth.shape[0] - 1, real_depth.shape[0])
         y = np.linspace(0, real_depth.shape[1] - 1, real_depth.shape[1])
         pixel_coords_xy = np.vstack(np.meshgrid(y, x)).reshape(2, -1).T
+
+    adjusted_pixel_coords_xy = pixel_coords_xy.copy()
 
     x = np.linspace(0, real_depth.shape[0] - 1, real_depth.shape[0])
     y = np.linspace(0, real_depth.shape[1] - 1, real_depth.shape[1])
@@ -57,15 +59,20 @@ def pixel_coords_to_world_coords(T_pixel2world, real_depth, pixel_coords_xy = No
     for i in range(9):
         pixel_z_coords_i = interp_depth(pixel_coords_xy_region[:, i, :] @ np.array([[0, 1], [1, 0]]))[:, np.newaxis]  # shape (n, 1)
         # take min depth across all 9 neighbours
+        is_minimum_i = pixel_z_coords_i < pixel_z_coords
+        adjusted_pixel_coords_xy[is_minimum_i[:,0], :] = pixel_coords_xy_region[:, i, :][is_minimum_i[:,0], :]
         pixel_z_coords = np.minimum(pixel_z_coords, pixel_z_coords_i)  # shape (n, 1)
     # pixel_z_coords /= 9.0
 
     # pixel_z_coords = interp_depth(pixel_coords_xy @ np.array([[0, 1], [1, 0]]))[:, np.newaxis]  # shape (n, 1)
 
-    pixel_coords = np.hstack((pixel_coords_xy * pixel_z_coords, pixel_z_coords, np.ones_like(pixel_z_coords)))
+    pixel_coords = np.hstack((adjusted_pixel_coords_xy * pixel_z_coords, pixel_z_coords, np.ones_like(pixel_z_coords)))
     world_coords = (T_pixel2world @ pixel_coords.T).T
+
+    if return_adjusted_pixel_coords_xy:
+        return world_coords, pixel_coords, adjusted_pixel_coords_xy
     
-    return world_coords, pixel_coords
+    return world_coords
 
 def pixel_coords_to_world_coords_moving_pixels(T_pixel2world, real_depth_0, real_depth_1, pixel_coords_xy = None):
     """
