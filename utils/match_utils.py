@@ -64,6 +64,22 @@ def is_on_geom(pixel_coords_xy, seg, ngeom):
     return is_on_geom
 
 
+def create_feature_table_mask(ft_wpos: np.ndarray):
+    """ Create mask for features that are on the table
+    Parameters:
+        ft_wpos: (N, 3 or 4) array of feature world positions
+    """
+    table_lower = np.array([-0.65, 0.25, 0.0013])
+    table_upper = np.array([0.65, 0.95, 0.6])
+    mask_table = np.logical_and(np.all(ft_wpos[:,:3] > table_lower, axis=1), np.all(ft_wpos[:,:3] < table_upper, axis=1))
+    # TODO adjust table inlet bounds
+    table_inlet_lower = np.array([-0.65, 0.25, -0.1])
+    table_inlet_upper = np.array([0.65, 0.95, 0.0])
+    mask_table_inlet = np.logical_and(np.all(ft_wpos[:,:3] > table_inlet_lower, axis=1), np.all(ft_wpos[:,:3] < table_inlet_upper, axis=1))
+    mask = np.logical_or(mask_table, mask_table_inlet)
+    return mask
+
+
 def rel_pos_to_geom(world_coords: np.ndarray, geom_xpos: np.ndarray, geom_xmat: np.ndarray):
     """ Compute relative position of points to geoms
     Parameters:
@@ -208,11 +224,13 @@ def match_features(
     # TODO why do we need color change again?
     # mask_color_change_0 = np.linalg.norm(colors_0_in_1 - colors_0, axis=1) > 0.01
     # mask_color_change_1 = np.linalg.norm(colors_1_in_0 - colors_1, axis=1) > 0.01 
-    mask_0 = mask_moving_points_0 # np.logical_or(mask_moving_points_0, mask_color_change_0)
-    mask_1 = mask_moving_points_1 # np.logical_or(mask_moving_points_1, mask_color_change_1)
+    # mask_0 = mask_moving_points_0 # np.logical_or(mask_moving_points_0, mask_color_change_0)
+    # mask_1 = mask_moving_points_1 # np.logical_or(mask_moving_points_1, mask_color_change_1)
 
     # apply filter
     # TODO make sure to keep keypoints from all geoms => or apply max keypoints after matching keypoints
+    mask_0 = create_feature_table_mask(world_coords_0)
+    mask_1 = create_feature_table_mask(world_coords_1)
     world_coords_0 = world_coords_0[mask_0]
     world_coords_1 = world_coords_1[mask_1]
     kpts_0 = kpts_0[mask_0]

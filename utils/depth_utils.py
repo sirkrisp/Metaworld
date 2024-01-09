@@ -2,7 +2,7 @@ from scipy.interpolate import RegularGridInterpolator
 import numpy as np
 
 
-def pixel_coords_to_world_coords_simple(T_pixel2world, real_depth, pixel_coords_xy = None):
+def pixel_coords_to_world_coords_simple(T_pixel2world, real_depth, pixel_coords_xy = None, return_pixel_coords_xy=False):
     """
     Convert image coordinates to world coordinates.
 
@@ -24,6 +24,9 @@ def pixel_coords_to_world_coords_simple(T_pixel2world, real_depth, pixel_coords_
     pixel_z_coords = interp_depth(pixel_coords_xy @ np.array([[0, 1], [1, 0]]))[:, np.newaxis]  # shape (n, 1)
     pixel_coords = np.hstack((pixel_coords_xy * pixel_z_coords, pixel_z_coords, np.ones_like(pixel_z_coords)))
     world_coords = (T_pixel2world @ pixel_coords.T).T
+
+    if return_pixel_coords_xy:
+        return world_coords, pixel_coords_xy
     
     return world_coords
 

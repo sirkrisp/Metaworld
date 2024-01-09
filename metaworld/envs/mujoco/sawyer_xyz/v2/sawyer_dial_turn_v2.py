@@ -89,8 +89,8 @@ class SawyerDialTurnEnvV2(SawyerXYZEnv):
         return self.data.body("dial").xquat
 
     def reset_model(self):
-        if self.reset_hand:
-            self._reset_hand()
+        # if self.reset_hand:
+        self._reset_hand()
         self._target_pos = self.goal.copy()
         self.obj_init_pos = self.init_config["obj_init_pos"]
         self.prev_obs = self._get_curr_obs_combined_no_goal()

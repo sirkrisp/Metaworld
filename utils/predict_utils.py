@@ -111,11 +111,12 @@ class TranslationEstimatorXY(BaseEstimator, TransformerMixin):
     def predict(self, X):
         return self.transform(X)
     
-ransac_translation = RANSACRegressor(estimator=TranslationEstimatorXY(), min_samples=2, residual_threshold=0.1)
+ransac_translation = RANSACRegressor(estimator=TranslationEstimatorXY(), min_samples=2)  # , residual_threshold=0.1
 
 def estimate_translation(X, Y):
-    ransac_translation.fit(X, Y)
-    t = np.array(ransac_translation.estimator_.translation_)
+    # ransac_translation.fit(X, Y)
+    # t = np.array(ransac_translation.estimator_.translation_)
+    t = np.mean(Y, axis=0) - np.mean(X, axis=0)
     def predict(X_new):
         return X_new + t
     return t, predict

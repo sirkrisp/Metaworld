@@ -54,10 +54,11 @@ def generate_keyframes(env, renderer):
 
 
 def generate_cur_keyframe(env, renderer):
-    o = env.reset()
-    # TODO forward sim
+    # reset env
+    env.reset()
+    # TODO why needed?
     mujoco.mj_resetData(env.model, env.data)
-    o = env_utils.go_forward(env, n_steps=100)["o"]
+
     # do not visualize robot bodies and sites
     root_node, node_map = mujoco_utils.build_mj_tree(env.model)
     name2node = {}
@@ -70,12 +71,17 @@ def generate_cur_keyframe(env, renderer):
     #     env.model.site("goal").rgba = [0,0,1,1]
     mujoco_utils.toggle_visibility(env.model, name2node["base"], False)
 
+    env.go_to_step(0)
     mujoco.mj_forward(env.model, env.data)
+    o = env_utils.go_forward(env, n_steps=100)["o"]
+    
     render_data = renderer.render(depth=True, segmentation=False)
+    img = render_data["img"].copy()
+    depth = render_data["depth"].copy()
 
     mujoco_utils.toggle_visibility(env.model, name2node["base"], True)
 
-    return render_data["img"], render_data["depth"]
+    return img, depth
 
 
 

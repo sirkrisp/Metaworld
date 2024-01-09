@@ -1,8 +1,9 @@
 import numpy as np
 import torch
+from typing import Union, List, Tuple, Dict, TypeVar, Any
 
 
-def to_numpy(t):
+def to_numpy(t: Any) -> Any:
     if isinstance(t, dict):
         for k, v in t.items():
             t[k] = to_numpy(v)

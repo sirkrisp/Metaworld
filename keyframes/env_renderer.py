@@ -12,18 +12,18 @@ class EnvRenderer:
         # mujoco.mj_forward(self.env.model, self.env.data)
         self.renderer.update_scene(self.env.data, self.camera_name if camera_name is None else camera_name)
         img = self.renderer.render()
-        data = {"img": img}
+        data = {"img": img.copy()}
         if depth:
             self.renderer.enable_depth_rendering()
             depth = self.renderer.render()
-            data["depth"] = depth
+            data["depth"] = depth.copy()
             self.renderer.disable_depth_rendering()
         if segmentation:
             # NOTE seg[:,:,0] is the geom id, seg[:,:,1] is the object type.
             # Furthermore, if the object is a site, then the geom id is the one of the geom behind the site!
             self.renderer.enable_segmentation_rendering()
             seg = self.renderer.render()
-            data["seg"] = seg
+            data["seg"] = seg.copy()
             self.renderer.disable_segmentation_rendering()
         return data
     
