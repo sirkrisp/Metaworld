@@ -11,6 +11,7 @@ import utils.depth_utils as depth_utils
 import utils.predict_utils as predict_utils
 import utils.torch_utils as torch_utils
 import utils.slam_utils as slam_utils
+import utils.geom_utils as geom_utils
 
 DEVICE = "cuda"
 
@@ -151,7 +152,9 @@ class MatchDataNP:
     descriptors_1: np.ndarray
     matches_0: np.ndarray
     matches_1: np.ndarray
-    assignment_mtr: np.ndarray
+    match_scores_0: np.ndarray
+    match_scores_1: np.ndarray
+    # assignment_mtr: np.ndarray
 
 
 def predictions_to_match_data_v2(model_input, predictions, b=0):
@@ -163,8 +166,8 @@ def predictions_to_match_data_v2(model_input, predictions, b=0):
         "descriptors_1": model_input["descriptors1"][b],
         "matches_0": predictions["matches0"][b],
         "matches_1": predictions["matches1"][b],
-        # TODO use assignment_mtr from predictions!!
-        "assignment_mtr": model_input["gt_assignment"][b],
+        "match_scores_0": predictions["matching_scores0"][b],
+        "match_scores_1": predictions["matching_scores1"][b],
     }
     args_pred = torch_utils.to_numpy(args_pred)
     match_data_pred = MatchDataNP(**args_pred)
@@ -683,6 +686,8 @@ def predict_feature_movement_v3(
     #         m_0_0_to_1_0[idx_0_0] = idx_1_0
 
     # find moving keypoints in match_data_0
+    # TODO only cosider keypoints that are not moving between ref_0 and ref_1
+    # => see v4
     m_moving_0_0_to_0_1 = []
     for idx_0_0 in range(matches_0_0.shape[0]):
         idx_0_1 = matches_0_0[idx_0_0]
@@ -702,7 +707,7 @@ def predict_feature_movement_v3(
     ignore = np.zeros(wpos_kpts_1_0.shape[0], dtype=bool)
     for i in range(m_moving_0_0_to_0_1.shape[0]):
         idx_0_0 = m_moving_0_0_to_0_1[i][0]
-        idx_1_0 = idx_0_0 # m_0_0_to_1_0[idx_0_0]
+        idx_1_0 = idx_0_0  # m_0_0_to_1_0[idx_0_0]
         # if idx_1_0 != -1:
         ignore[idx_1_0] = True
     if np.sum(ignore) == ignore.shape[0]:
@@ -723,13 +728,170 @@ def predict_feature_movement_v3(
     for i in range(m_moving_0_0_to_0_1.shape[0]):
         idx_0_0 = m_moving_0_0_to_0_1[i][0]
         idx_0_1 = m_moving_0_0_to_0_1[i][1]
-        idx_1_0 = idx_0_0 # m_0_0_to_1_0[idx_0_0]
+        idx_1_0 = idx_0_0  # m_0_0_to_1_0[idx_0_0]
         # if idx_1_0 != -1:
         idx_1_1 = matches_1_0[idx_1_0]
         if idx_1_1 != -1:
             m_moving_0_1_to_1_1.append((idx_0_1, idx_1_1))
     m_moving_0_1_to_1_1 = np.array(m_moving_0_1_to_1_1)
 
+    # create map for closest keypoints in 1_0 to 1_1
+    m_closest_1_0_to_1_1 = []
+    for i in range(closest_points_in_1_0.shape[0]):
+        idx_1_0 = closest_points_in_1_0[i]
+        idx_1_1 = matches_1_0[idx_1_0]
+        if idx_1_1 != -1:
+            m_closest_1_0_to_1_1.append((idx_1_0, idx_1_1))
+    m_closest_1_0_to_1_1 = np.array(m_closest_1_0_to_1_1)
+
+    # compute transformation of closest point matches
+    t_closest, predict_closest = predict_utils.estimate_translation(
+        wpos_kpts_1_0[m_closest_1_0_to_1_1[:, 0]],
+        wpos_kpts_1_1[m_closest_1_0_to_1_1[:, 1]],
+    )
+
+    # TODO this should not be part of this function
+    # compute new positions of moving points in 2_1
+    # kpts_2_0 = kpts_1_1[m_moving_0_1_to_1_1[:,1]]
+    wpos_kpts_2_0 = wpos_kpts_1_1[m_moving_0_1_to_1_1[:, 1]]
+    wpos_kpts_2_1 = predict_closest(wpos_kpts_0_1[m_moving_0_1_to_1_1[:, 0]])
+    # kpts_2_1 = depth_utils.world_coords_to_pixel_coords(T_world2pixel, wpos_kpts_2_1)
+
+    return {
+        "T": {
+            "t_closest": t_closest,
+        },
+        "kpts": {
+            # "kpts_2_0": kpts_2_0,
+            # "kpts_2_1": kpts_2_1,
+            "wpos_kpts_2_0": wpos_kpts_2_0,
+            "wpos_kpts_2_1": wpos_kpts_2_1,
+        },
+        "debug": {
+            # "m_0_0_to_1_0": m_0_0_to_1_0,
+            "m_moving_0_0_to_0_1": m_moving_0_0_to_0_1,
+            "wcenter_moving_0_1": wcenter_moving_0_1,
+            "closest_points_in_1_0": closest_points_in_1_0,
+            "m_moving_0_1_to_1_1": m_moving_0_1_to_1_1,
+            "m_closest_1_0_to_1_1": m_closest_1_0_to_1_1,
+        },
+    }
+
+
+def predict_feature_movement_v4(
+    depth_0_0: np.ndarray,
+    depth_0_1: np.ndarray,
+    kpts_0_0: np.ndarray,
+    kpts_0_1: np.ndarray,
+    wpos_kpts_0_0: np.ndarray,
+    wpos_kpts_0_1: np.ndarray,
+    wpos_kpts_1_1: np.ndarray,
+    matches_0_0: np.ndarray,
+    matches_1_0: np.ndarray,
+):
+    """
+    Args:
+        - wpos_kpts_0_0 (np.ndarray): (N, 3) world coordinates of keypoints in ref_0
+        - wpos_kpts_0_1 (np.ndarray): (N, 3) world coordinates of keypoints in ref_1
+        - wpos_kpts_1_1 (np.ndarray): (N, 3) world coordinates of keypoints in cur
+        - matches_0_0 (np.ndarray): (N,) keypoint i in ref_0 matches keypoint matches_0_0[i] in ref_1
+        - matches_1_0 (np.ndarray): (N,) keypoint i in ref_0 matches keypoint matches_1_0[i] in cur
+    Returns:
+        - T (dict): transformation matrix from ref_0 to cur
+        - kpts (dict): keypoints in ref_0 and cur
+    """
+
+    wpos_kpts_1_0 = wpos_kpts_0_0.copy()
+
+    # # map kpts_0_0 to kpts_1_0
+    # m_0_0_to_1_0 = -np.ones_like(matches_0_0)
+    # for idx_0_0 in range(matches_0_0.shape[0]):
+    #     wpos_0_0 = wpos_kpts_0_0[idx_0_0]
+    #     dists = np.linalg.norm(wpos_0_0 - wpos_kpts_1_0, axis=1)
+    #     idx_1_0 = np.argmin(dists)
+    #     if dists[idx_1_0] < 0.05:
+    #         m_0_0_to_1_0[idx_0_0] = idx_1_0
+
+    # find moving keypoints in match_data_0
+    # TODO only cosider keypoints that are not moving between ref_0 and ref_1
+    # => see v4
+    kpts_0_0_depth_in_0_0 = depth_utils.pixel_coords_to_depth(depth_0_0, kpts_0_0)
+    kpts_0_0_depth_in_0_1 = depth_utils.pixel_coords_to_depth(depth_0_1, kpts_0_0)
+    kpts_0_1_depth_in_0_0 = depth_utils.pixel_coords_to_depth(depth_0_0, kpts_0_1)
+    kpts_0_1_depth_in_0_1 = depth_utils.pixel_coords_to_depth(depth_0_1, kpts_0_1)
+    m_moving_0_0_to_0_1 = []
+    for idx_0_0 in range(matches_0_0.shape[0]):
+        # make sure kpt_0_0 is closer to camera in ref_0 than in ref_1 => moving
+        # TODO also include
+        idx_0_1 = matches_0_0[idx_0_0]
+        if idx_0_1 != -1:
+            point_moves_in_0_0 = kpts_0_0_depth_in_0_0[idx_0_0] < (
+                kpts_0_0_depth_in_0_1[idx_0_0] - 0.025
+            )
+            point_moves_in_0_1 = kpts_0_1_depth_in_0_1[idx_0_1] < (
+                kpts_0_1_depth_in_0_0[idx_0_1] - 0.025
+            )
+            if point_moves_in_0_0 or point_moves_in_0_1:
+                wpos_0 = wpos_kpts_0_0[idx_0_0]
+                wpos_1 = wpos_kpts_0_1[idx_0_1]
+                if np.linalg.norm(wpos_0 - wpos_1) > 0.025:
+                    m_moving_0_0_to_0_1.append((idx_0_0, idx_0_1))
+    m_moving_0_0_to_0_1 = np.array(m_moving_0_0_to_0_1)
+
+    # Go again through moving keypoints and filter out outliers.
+    # Also add filtered out keypoints to ignore list
+    ignore = np.zeros(wpos_kpts_1_0.shape[0], dtype=bool)
+    dmoving = (
+        wpos_kpts_0_0[m_moving_0_0_to_0_1[:, 0]]
+        - wpos_kpts_0_1[m_moving_0_0_to_0_1[:, 1]]
+    )
+    m_moving_0_0_to_0_1_n_matches = np.zeros(m_moving_0_0_to_0_1.shape[0], dtype=int)
+    for i, (idx_0_0, _) in enumerate(m_moving_0_0_to_0_1):
+        idx_1_0 = idx_0_0
+        ignore[idx_1_0] = True
+        angle_degrees = geom_utils.calculate_angle(dmoving, dmoving[i])
+        m_moving_0_0_to_0_1_n_matches[i] = np.sum(angle_degrees < 10)
+    m_moving_0_0_to_0_1 = m_moving_0_0_to_0_1[
+        m_moving_0_0_to_0_1_n_matches > (m_moving_0_0_to_0_1.shape[0] // 2)
+    ]
+
+    # we assume only 1 object is moving between frames
+    # compute center of moving points in 0_1
+    wcenter_moving_0_1 = np.mean(wpos_kpts_0_1[m_moving_0_0_to_0_1[:, 1]], axis=0)
+
+    # find points in 0_0 close to wcenter_moving_0_1
+    # NOTE only consider points that are not moving between ref_0 and ref_1
+    for i in range(m_moving_0_0_to_0_1.shape[0]):
+        idx_0_0 = m_moving_0_0_to_0_1[i][0]
+        idx_1_0 = idx_0_0  # m_0_0_to_1_0[idx_0_0]
+        # if idx_1_0 != -1:
+        ignore[idx_1_0] = True
+    if np.sum(ignore) == ignore.shape[0]:
+        # if no points to consider, throw Error
+        raise ValueError("No points to consider")
+    closest_points_in_1_0 = predict_utils.get_close_feature_points_np(
+        wcenter_moving_0_1, wpos_kpts_1_0, ignore=ignore, n_closest=10
+    )
+    closest_points_in_1_0_without_ignored = []
+    for i in range(closest_points_in_1_0.shape[0]):
+        idx_1_0 = closest_points_in_1_0[i]
+        if not ignore[idx_1_0]:
+            closest_points_in_1_0_without_ignored.append(idx_1_0)
+    closest_points_in_1_0 = np.array(closest_points_in_1_0_without_ignored)
+
+    # create map for moving keypoints in 0_1 to 1_1
+    m_moving_0_1_to_1_1 = []
+    for i in range(m_moving_0_0_to_0_1.shape[0]):
+        idx_0_0 = m_moving_0_0_to_0_1[i][0]
+        idx_0_1 = m_moving_0_0_to_0_1[i][1]
+        idx_1_0 = idx_0_0  # m_0_0_to_1_0[idx_0_0]
+        # if idx_1_0 != -1:
+        idx_1_1 = matches_1_0[idx_1_0]
+        if idx_1_1 != -1:
+            m_moving_0_1_to_1_1.append((idx_0_1, idx_1_1))
+    m_moving_0_1_to_1_1 = np.array(m_moving_0_1_to_1_1)
+    if m_moving_0_1_to_1_1.shape[0] == 0:
+        raise ValueError("No moving points found")
 
     # create map for closest keypoints in 1_0 to 1_1
     m_closest_1_0_to_1_1 = []
@@ -775,7 +937,7 @@ def predict_feature_movement_v3(
 
 
 def compute_img_features(
-    model_fts_extract, img: np.ndarray, depth: np.ndarray, T_pixel2world: np.ndarray
+    model_fts_extract, img: np.ndarray, depth: np.ndarray, T_pixel2world: np.ndarray, table_offset_z=0.0
 ):
     """
     Args:
@@ -800,7 +962,7 @@ def compute_img_features(
     wpos_kpts = depth_utils.pixel_coords_to_world_coords(
         T_pixel2world=T_pixel2world, real_depth=depth, pixel_coords_xy=kpts
     )
-    mask = match_utils.create_feature_table_mask(wpos_kpts)
+    mask = match_utils.create_feature_table_mask(wpos_kpts, table_offset_z=table_offset_z)
     kpts = kpts[mask]
     wpos_kpts = wpos_kpts[mask]
     desc = desc[mask]
@@ -843,6 +1005,8 @@ def compute_matches(
         "kpts_scores_1": kpts_scores_1,
         "matches_0": match_data_0.matches_0,
         "matches_1": match_data_0.matches_1,
+        "match_scores_0": match_data_0.match_scores_0,
+        "match_scores_1": match_data_0.match_scores_1,
     }
     return torch_utils.to_numpy(match_data)
 
@@ -870,7 +1034,11 @@ def predict_feature_movement_from_ref_data(
     match_data_1 = torch_utils.to_numpy(match_data_1)
 
     # predict feature movement
-    pred_res = predict_feature_movement_v3(
+    pred_res = predict_feature_movement_v4(
+        depth_0_0=ref_match_data["depth_0"],
+        depth_0_1=ref_match_data["depth_1"],
+        kpts_0_0=ref_match_data["kpts_0"],
+        kpts_0_1=ref_match_data["kpts_1"],
         wpos_kpts_0_0=ref_match_data["wpos_kpts_0"],
         wpos_kpts_0_1=ref_match_data["wpos_kpts_1"],
         wpos_kpts_1_1=wpos_kpts_cur,
@@ -897,7 +1065,7 @@ def predict_feature_movement_from_ref_data(
 def visualize_keypoint_matches_0(img_0, img_1, kpts_0, kpts_1, matches_0):
     kpts_0 = kpts_0[matches_0 != -1]
     kpts_1 = kpts_1[matches_0[matches_0 != -1]]
-    show_matches_kpts(img_0, img_1, kpts_0, kpts_1) 
+    show_matches_kpts(img_0, img_1, kpts_0, kpts_1)
 
 
 def visualize_keypoint_mapping(img_0, img_1, kpts_0, kpts_1, kpts_m):

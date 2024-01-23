@@ -4,6 +4,16 @@ import matplotlib.pyplot as plt
 import cv2
 
 
+def show_image_with_mask(img, mask, random_color=False):
+    plt.figure(figsize=(10,10))
+    plt.imshow(img)
+    show_mask(mask, plt.gca(), random_color=random_color)
+    #show_points(input_points, input_labels, plt.gca())
+    # plt.title(f"Mask {i+1}, Score: {score:.3f}", fontsize=18)
+    plt.axis('off')
+    plt.show() 
+
+
 def show_mask(mask, ax, random_color=False):
     if random_color:
         color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)

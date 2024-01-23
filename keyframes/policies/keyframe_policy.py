@@ -1,9 +1,9 @@
 import utils.inference_utils as inference_utils
-import keyframes.pl_modules as pl_modules
+import keyframes.finetune_lightglue.pl_modules as pl_modules
 import utils.slam_utils as slam_utils
 import utils.depth_utils as depth_utils
 import utils.predict_utils as predict_utils
-import keyframes.grasp_pose as grasp_pose
+import keyframes.estimators.grasp_pose_estimator as grasp_pose_estimator
 import keyframes.policies.pick_place_policy as pick_place_policy
 import numpy as np
 
@@ -59,7 +59,7 @@ class KeyframePolicy:
         self.pred_res = None
 
         # grasp pose
-        self.grasp_pose_estimator = grasp_pose.GraspPoseEstimatorMCC(
+        self.grasp_pose_estimator = grasp_pose_estimator.GraspPoseEstimatorMCC(
             seg_any_ckpt_path=seg_any_ckpt_path,
             mcc_ckpt_path=mcc_ckpt_path,
             device=device,

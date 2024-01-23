@@ -9,7 +9,7 @@ def to_numpy(t: Any) -> Any:
             t[k] = to_numpy(v)
         return t
     elif isinstance(t, torch.Tensor):
-        return t.cpu().numpy()
+        return t.detach().cpu().numpy()
     else:
         return t
     

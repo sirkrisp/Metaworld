@@ -56,6 +56,7 @@ class SegAny:
 
         best_mask = None
         n_points_in_best_mask = 0
+        smallest_mask_area = np.inf
         for _ in range(n_iters):
             subset = np.random.choice(n, n_sample_points, replace=False)
             input_points = points[subset]
@@ -67,8 +68,10 @@ class SegAny:
                 if not self.mask_is_valid(mask):
                     continue
                 n_points_in_mask = self._points_in_mask(points, mask).sum()
-                if n_points_in_mask > n_points_in_best_mask:
+                mask_area = mask.sum()
+                if n_points_in_mask >= n_points_in_best_mask and mask_area < smallest_mask_area:
                     best_mask = mask
+                    smallest_mask_area = mask_area
                     n_points_in_best_mask = self._points_in_mask(points, mask).sum()
 
         return best_mask

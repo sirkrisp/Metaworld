@@ -40,10 +40,11 @@ class PickPlacePolicy(agent.Agent):
                 gripper_action=0.0,
                 p=p,
                 threshold=threshold,
+                max_steps=40
             ),
             # Move to grasp position
             policy_path_points.MoveTo(
-                pos=grasp_pos, gripper_action=0.0, p=p, threshold=threshold
+                pos=grasp_pos, gripper_action=0.0, p=p, threshold=threshold, max_steps=40
             ),
             # Grasp
             policy_path_points.Gripper(gripper_action=1.0, num_gripper_steps=10),
@@ -62,11 +63,12 @@ class PickPlacePolicy(agent.Agent):
                 pos=np.minimum(max_ee_pos, target_pos + top_pos_offset), 
                 gripper_action=1.0, 
                 p=p, 
-                threshold=threshold
+                threshold=threshold,
+                max_steps=40
             ),
             # Move above goal position
             policy_path_points.MoveTo(
-                pos=target_pos, gripper_action=1.0, p=p, threshold=threshold
+                pos=target_pos, gripper_action=1.0, p=p, threshold=threshold, max_steps=40
             ),
         ]
 

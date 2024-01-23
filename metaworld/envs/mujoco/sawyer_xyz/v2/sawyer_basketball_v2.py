@@ -90,7 +90,9 @@ class SawyerBasketballEnvV2(SawyerXYZEnv):
         return self.data.body("basketball").xquat
     
     def correct_obj_pos(self, obj_pos):
-        correction = np.array([0,-0.6,-0.22012784])
+        # correction = np.array([0,-0.6,-0.022012784])
+        # correction = np.array([0.11989118, -2.08091777, -1.79021732])
+        correction = np.zeros(3)
         return obj_pos + correction
 
     def reset_model(self):
@@ -102,8 +104,8 @@ class SawyerBasketballEnvV2(SawyerXYZEnv):
             goal_pos = self._get_state_rand_vec()
             basket_pos = goal_pos[3:]
         obj_pos = np.concatenate((goal_pos[:2], [0.03]))
-        self.obj_init_pos = obj_pos
-        self.model.body("basketball").pos = self.correct_obj_pos(self.obj_init_pos)
+        self.obj_init_pos = obj_pos # + np.array([0,-0.6,-0.022012784])
+        self.model.body("bsktball").pos = self.correct_obj_pos(self.obj_init_pos)
         self.model.body("basket_goal").pos = basket_pos
         self._basket_pos = basket_pos
         # mujoco.mj_forward(self.model, self.data)
@@ -118,9 +120,11 @@ class SawyerBasketballEnvV2(SawyerXYZEnv):
     
     def go_to_step(self, step):
         if step == 0:
-            self.model.body("basketball").pos = self.correct_obj_pos(self.obj_init_pos)
+            # self.model.body("basketball").pos = self.obj_init_pos
+            self._set_obj_xyz(self.correct_obj_pos(self.obj_init_pos))
         elif step == 1:
-            self.model.body("basketball").pos = self.correct_obj_pos(self._target_pos)
+            # self.model.body("basketball").pos = self._target_pos
+            self._set_obj_xyz(self.correct_obj_pos(self._target_pos))
 
     def compute_reward(self, action, obs):
         obj = obs[4:7]

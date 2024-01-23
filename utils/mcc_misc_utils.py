@@ -112,4 +112,5 @@ def predict_mcc(
                 ) * torch.linspace(0, 1, 256, device=pred.device)
             ).sum(axis=2)
         )
+    
     return torch.cat(pred_occupy, dim=1), torch.cat(pred_colors, dim=0)

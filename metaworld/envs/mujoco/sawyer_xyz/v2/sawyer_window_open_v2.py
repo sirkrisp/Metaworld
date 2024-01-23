@@ -120,9 +120,9 @@ class SawyerWindowOpenEnvV2(SawyerXYZEnv):
     
     def go_to_step(self, step):
         if step == 0:
-            self.model.joint("window_slide").qpos0 = 0.0
+            self.data.joint("window_slide").qpos = 0.0
         elif step == 1:
-            self.model.joint("window_slide").qpos0 = -0.2
+            self.data.joint("window_slide").qpos = 0.2
 
     def compute_reward(self, actions, obs):
         del actions

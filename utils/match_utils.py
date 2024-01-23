@@ -64,17 +64,18 @@ def is_on_geom(pixel_coords_xy, seg, ngeom):
     return is_on_geom
 
 
-def create_feature_table_mask(ft_wpos: np.ndarray):
+def create_feature_table_mask(ft_wpos: np.ndarray, table_offset_z=0.0):
     """ Create mask for features that are on the table
     Parameters:
         ft_wpos: (N, 3 or 4) array of feature world positions
+        table_offset_z: For environments with inlets (17,30,46), set table_offset_z to 0.05
     """
-    table_lower = np.array([-0.65, 0.25, 0.0013])
-    table_upper = np.array([0.65, 0.95, 0.6])
+    table_lower = np.array([-0.65, 0.25, 0.01 + table_offset_z])  # 0.0025, 0.0013
+    table_upper = np.array([0.65, 0.95, 0.6 + table_offset_z])
     mask_table = np.logical_and(np.all(ft_wpos[:,:3] > table_lower, axis=1), np.all(ft_wpos[:,:3] < table_upper, axis=1))
     # TODO adjust table inlet bounds
-    table_inlet_lower = np.array([-0.65, 0.25, -0.1])
-    table_inlet_upper = np.array([0.65, 0.95, 0.0])
+    table_inlet_lower = np.array([-0.65, 0.25, -0.15 + table_offset_z])
+    table_inlet_upper = np.array([0.65, 0.95, 0.0 + table_offset_z])
     mask_table_inlet = np.logical_and(np.all(ft_wpos[:,:3] > table_inlet_lower, axis=1), np.all(ft_wpos[:,:3] < table_inlet_upper, axis=1))
     mask = np.logical_or(mask_table, mask_table_inlet)
     return mask
@@ -130,8 +131,9 @@ def match_world_coords(world_coords_0, world_coords_1, geom_xpos_0, geom_xpos_1,
         is_on_geom_i_1 = is_on_geom_1[:, i]
         if(np.sum(is_on_geom_i_0) == 0 or np.sum(is_on_geom_i_1) == 0):
             continue
-        if np.linalg.norm(geom_xpos_0[i] - geom_xpos_1[i]) < 0.001:
-            continue
+        # TODO we also want to consider non moving geometries
+        # if np.linalg.norm(geom_xpos_0[i] - geom_xpos_1[i]) < 0.001:
+        #     continue
         rel_pos_i_0 = rel_pos_to_blocks_1[is_on_geom_i_0, i, :]
         rel_pos_i_1 = rel_pos_to_blocks_2[is_on_geom_i_1, i, :]
         index_map_0 = global_index_0[is_on_geom_i_0]
@@ -252,6 +254,8 @@ def match_features(
     world_coords_1 = world_coords_1[sample_mask_1]
     kpts_0 = kpts_0[sample_mask_0]
     kpts_1 = kpts_1[sample_mask_1]
+    kpts_0_adjusted = kpts_0_adjusted[sample_mask_0]
+    kpts_1_adjusted = kpts_1_adjusted[sample_mask_1]
     dscpt_0 = dscpt_0[sample_mask_0]
     dscpt_1 = dscpt_1[sample_mask_1]
     
@@ -269,6 +273,8 @@ def match_features(
     # convert to tensors
     kpts_0 = torch.from_numpy(kpts_0).float()
     kpts_1 = torch.from_numpy(kpts_1).float()
+    kpts_0_adjusted = torch.from_numpy(kpts_0_adjusted).float()
+    kpts_1_adjusted = torch.from_numpy(kpts_1_adjusted).float()
     dscpt_0 = torch.from_numpy(dscpt_0).float()
     dscpt_1 = torch.from_numpy(dscpt_1).float()
     matches_0 = torch.from_numpy(matches_0).long()
@@ -279,6 +285,9 @@ def match_features(
     # pad keypoints with 0
     kpts_0 = torch.cat([kpts_0, torch.zeros((max_keypoints - kpts_0.shape[0], 2))], dim=0)
     kpts_1 = torch.cat([kpts_1, torch.zeros((max_keypoints - kpts_1.shape[0], 2))], dim=0)
+    # pad keypoints_adjusted with 0
+    kpts_0_adjusted = torch.cat([kpts_0_adjusted, torch.zeros((max_keypoints - kpts_0_adjusted.shape[0], 2))], dim=0)
+    kpts_1_adjusted = torch.cat([kpts_1_adjusted, torch.zeros((max_keypoints - kpts_1_adjusted.shape[0], 2))], dim=0)
     # pad descriptors with 0
     dscpt_0 = torch.cat([dscpt_0, torch.zeros((max_keypoints - dscpt_0.shape[0], 256))], dim=0)
     dscpt_1 = torch.cat([dscpt_1, torch.zeros((max_keypoints - dscpt_1.shape[0], 256))], dim=0)
@@ -292,11 +301,15 @@ def match_features(
     args = {
         "keypoints_0": kpts_0,
         "keypoints_1": kpts_1,
+        "kpts_0_adjusted": kpts_0_adjusted,
+        "kpts_1_adjusted": kpts_1_adjusted,
         "descriptors_0": dscpt_0,
         "descriptors_1": dscpt_1,
         "matches_0": matches_0,
         "matches_1": matches_1,
         "assignment_mtr": assignment_mtr,
+        "world_coords_0": world_coords_0,
+        "world_coords_1": world_coords_1,
     }
     return args
 

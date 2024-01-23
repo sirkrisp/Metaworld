@@ -242,6 +242,15 @@ class SawyerXYZEnv(SawyerMocapBase, EzPickle):
         self.discrete_goal_space = Discrete(len(self.discrete_goals))
 
     def _set_obj_xyz(self, pos):
+        # TODO really not a good idea to hard-code this
+        #   NOTE => Always import <xyz_base/> first!!!
+        # - NOTE Since <xyz_base/> assets are imported before the target object,
+        #   the freejoint of the target object is positioned at the very end of the data vector
+        # - qpos of freejoint has 7 dimensions, 3 for position and 4 for quaternion
+        # - It would be better to set qpos with self.data.joint("target").qpos = pos
+        # - All joints of the robot are named, the only joint that is not named 
+        #   is the one of the target object
+
         qpos = self.data.qpos.flat.copy()
         qvel = self.data.qvel.flat.copy()
         qpos[9:12] = pos.copy()

@@ -45,6 +45,9 @@ class ReconstructMCC:
         """
         Args:
             normalized_query_points: (N, 3) torch.Tensor
+        Returns:
+            pred_occupy: (N) torch.Tensor
+            pred_colors: (N, 3) torch.Tensor
         """
         assert self.model_input is not None, "Please set input data first."
         is_seen = torch.zeros((normalized_query_points.shape[0]), device=self.device).bool()
@@ -70,7 +73,8 @@ class ReconstructMCC:
         pred_occupy, pred_colors = self.query_model(query_points)
         pred_occupy = pred_occupy.cpu().numpy().reshape(-1)
         # TODO this is not so robust
-        return 0.95 * (np.median(pred_occupy) - 2 * np.std(pred_occupy))
+        return np.min(pred_occupy)
+        # return 0.95 * (np.median(pred_occupy) - np.std(pred_occupy))
 
     def reconstruct(self):
         """
